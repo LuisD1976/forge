@@ -40,7 +40,8 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
   const [showRestTimer, setShowRestTimer] = useState(false)
   const [restDuration, setRestDuration] = useState(60)
   const [aiLoading, setAiLoading] = useState(false)
-  const [apiKey, setApiKey] = useState('')
+  const [aiError, setAiError] = useState(false)
+  const [aiSuccessName, setAiSuccessName] = useState<string | null>(null)
   const [aiParams, setAiParams] = useState({ goal: 'ganar músculo', days: 3, equipment: 'gimnasio', level: 'intermedio' })
   const [rankUpQueue, setRankUpQueue] = useState<RankUpEvent[]>([])
   const [currentRankUp, setCurrentRankUp] = useState<RankUpEvent | null>(null)
@@ -143,19 +144,17 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
   }
 
   const handleGenerateAI = async () => {
-    if (!apiKey) {
-      alert('Introduce tu API key de Anthropic para usar el generador IA')
-      return
-    }
+    setAiError(false)
+    setAiSuccessName(null)
     setAiLoading(true)
-    const routine = await generateRoutineWithAI({ ...aiParams, apiKey })
+    const routine = await generateRoutineWithAI(aiParams)
     setAiLoading(false)
     if (routine) {
       addRoutine(routine)
-      alert(`Rutina "${routine.name}" creada con IA y añadida a tu lista.`)
-      setView('routines')
+      setAiSuccessName(routine.name)
+      setTimeout(() => { setView('routines'); setAiSuccessName(null) }, 2000)
     } else {
-      alert('Error al generar la rutina. Verifica tu API key.')
+      setAiError(true)
     }
   }
 
@@ -236,17 +235,17 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
             </div>
           </div>
 
-          <div className="card-metal p-4">
-            <label className="text-xs text-forge-white/50 block mb-2">API Key de Anthropic (PRO)</label>
-            <input
-              type="password"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              className="w-full bg-forge-border rounded-xl px-3 py-2 text-forge-white text-sm outline-none font-mono border border-transparent focus:border-forge-orange"
-              placeholder="sk-ant-..."
-            />
-            <p className="text-xs text-forge-white/30 mt-1">Necesitas una clave de api.anthropic.com</p>
-          </div>
+          {aiError && (
+            <div className="card-metal p-3 border-red-500/40">
+              <p className="text-sm text-red-400 text-center">No se pudo generar la rutina. Intenta de nuevo.</p>
+            </div>
+          )}
+
+          {aiSuccessName && (
+            <div className="card-metal p-3 border-forge-green/40">
+              <p className="text-sm text-forge-green text-center font-semibold">¡Rutina "{aiSuccessName}" creada! ✓</p>
+            </div>
+          )}
 
           <button
             onClick={handleGenerateAI}

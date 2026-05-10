@@ -1,65 +1,62 @@
 import type { Routine, QuestionnaireAnswers } from '../types'
 
+const GROQ_KEY = import.meta.env.VITE_GROQ_API_KEY as string | undefined
+
+const EXERCISE_IDS = 'bench_press, squat, deadlift, overhead_press, barbell_row, pull_up, dip, incline_bench, leg_press, lat_pulldown, cable_row, bicep_curl, tricep_pushdown, lateral_raise, face_pull, leg_curl, leg_extension, calf_raise, hip_thrust, crunch, plank, dumbbell_press, romanian_deadlift, push_up, lunge, hammer_curl, skull_crusher, cable_fly, shrug, incline_curl'
+
 interface GenerateRoutineParams {
   goal: string
   days: number
   equipment: string
   level: string
-  apiKey: string
 }
 
 export async function generateRoutineWithAI(params: GenerateRoutineParams): Promise<Routine | null> {
+  if (!GROQ_KEY) return null
+
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': params.apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-calls': 'true',
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
+        model: 'llama-3.3-70b-versatile',
         max_tokens: 2048,
-        system: `Eres un entrenador personal experto. Genera rutinas de entrenamiento estructuradas en JSON válido.
-Responde ÚNICAMENTE con un objeto JSON sin markdown ni explicaciones adicionales.
-El formato debe ser exactamente:
-{
-  "id": "ai_routine_[timestamp]",
-  "name": "nombre de la rutina",
-  "description": "descripción breve",
-  "exercises": [
-    {"exerciseId": "bench_press", "sets": 4, "reps": "6-8", "rest": 120}
-  ],
-  "frequency": "Xveces/semana",
-  "category": "push|pull|legs|fullbody|hiit|custom",
-  "difficulty": 1-5,
-  "isAIGenerated": true
-}
-Usa estos exerciseIds disponibles: bench_press, squat, deadlift, overhead_press, barbell_row, pull_up, dip, incline_bench, leg_press, lat_pulldown, cable_row, bicep_curl, tricep_pushdown, lateral_raise, face_pull, leg_curl, leg_extension, calf_raise, hip_thrust, crunch, plank, dumbbell_press, romanian_deadlift, push_up, lunge, hammer_curl, skull_crusher, cable_fly, shrug, incline_curl`,
+        temperature: 0.4,
         messages: [
           {
+            role: 'system',
+            content: 'Eres el mejor entrenador personal del mundo. Generas rutinas en JSON puro válido. NUNCA uses markdown ni texto fuera del JSON. Solo devuelves UN objeto JSON.',
+          },
+          {
             role: 'user',
-            content: `Genera una rutina de entrenamiento con estos parámetros:
+            content: `Crea UNA rutina con estos parámetros:
 - Objetivo: ${params.goal}
-- Días por semana: ${params.days}
+- Días/semana: ${params.days}
 - Equipamiento: ${params.equipment}
-- Nivel: ${params.level}`,
+- Nivel: ${params.level}
+
+REGLAS:
+- exerciseId SOLO de esta lista: ${EXERCISE_IDS}
+- difficulty entre 1 y 5
+- category solo: push, pull, legs, fullbody, hiit, custom
+
+Formato exacto (sin markdown):
+{"id":"ai_1","name":"Nombre rutina","description":"Descripción breve","exercises":[{"exerciseId":"bench_press","sets":4,"reps":"8-10","rest":90}],"frequency":"${params.days}veces/semana","category":"push","difficulty":3,"isAIGenerated":true}`,
           },
         ],
       }),
     })
 
-    if (!response.ok) throw new Error(`API error: ${response.status}`)
-    const data = await response.json()
-    const content = data.content[0]?.text ?? ''
-    const jsonMatch = content.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) throw new Error('No JSON found in response')
-    const routine = JSON.parse(jsonMatch[0]) as Routine
+    if (!res.ok) return null
+    const data = await res.json()
+    const text: string = data.choices?.[0]?.message?.content ?? ''
+    const match = text.match(/\{[\s\S]*\}/)
+    if (!match) return null
+    const routine = JSON.parse(match[0]) as Routine
     routine.id = `ai_${Date.now()}`
+    routine.isAIGenerated = true
     return routine
-  } catch (err) {
-    console.error('AI routine generation error:', err)
+  } catch {
     return null
   }
 }
@@ -68,32 +65,26 @@ export async function getProgressiveSuggestion(
   exerciseId: string,
   lastWeight: number,
   lastReps: number,
-  apiKey: string
 ): Promise<string> {
+  if (!GROQ_KEY) return `Última vez: ${lastWeight}kg × ${lastReps}. Intenta ${lastWeight + 2.5}kg × ${lastReps}.`
+
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-calls': 'true',
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 150,
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 120,
+        temperature: 0.5,
         messages: [
-          {
-            role: 'user',
-            content: `Ejercicio: ${exerciseId}. Última sesión: ${lastWeight}kg x ${lastReps} reps. Dame una sugerencia breve de sobrecarga progresiva (1-2 frases).`,
-          },
+          { role: 'user', content: `Ejercicio: ${exerciseId}. Última sesión: ${lastWeight}kg x ${lastReps} reps. Dame una sugerencia breve de sobrecarga progresiva (1-2 frases en español).` },
         ],
       }),
     })
-    const data = await response.json()
-    return data.content[0]?.text ?? 'Mantén el mismo peso y añade 1 rep.'
+    const data = await res.json()
+    return data.choices?.[0]?.message?.content ?? `Intenta ${lastWeight + 2.5}kg × ${lastReps}.`
   } catch {
-    return `Última vez: ${lastWeight}kg x ${lastReps}. Intenta ${lastWeight + 2.5}kg x ${lastReps}.`
+    return `Última vez: ${lastWeight}kg × ${lastReps}. Intenta ${lastWeight + 2.5}kg × ${lastReps}.`
   }
 }
 
