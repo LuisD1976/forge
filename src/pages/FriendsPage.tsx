@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, Trophy, TrendingUp, UserPlus, Flame, Wifi, WifiOff, ChevronUp, Bell, PenLine } from 'lucide-react'
+import { Users, Trophy, TrendingUp, UserPlus, Flame, Wifi, WifiOff, ChevronUp, Bell, PenLine, Search, X, UserCheck } from 'lucide-react'
 import { useSocialStore } from '../store/socialStore'
 import { useAuth } from '../contexts/AuthContext'
 import { useUserStore } from '../store/userStore'
@@ -12,7 +12,7 @@ import { CreatePostModal } from '../components/CreatePostModal'
 import { NotificationsPanel } from '../components/NotificationsPanel'
 import { useSocialRealtime, useSocialPresence } from '../hooks/useSocialRealtime'
 import { useNotifications } from '../hooks/useNotifications'
-import { fetchFeedPosts, fetchLeaderboardFromDB } from '../services/socialService'
+import { fetchFeedPosts, fetchLeaderboardFromDB, searchUsers, followUser, unfollowUser } from '../services/socialService'
 import type { RankTier } from '../types'
 
 type SocialTab = 'feed' | 'friends' | 'leaderboard'
@@ -64,6 +64,38 @@ export const FriendsPage: React.FC = () => {
   const [showCompose, setShowCompose] = useState(false)
   const [showNotifs, setShowNotifs] = useState(false)
   const feedTopRef = useRef<HTMLDivElement>(null)
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<{ id: string; username: string; displayName: string; avatar: string; isFollowing: boolean }[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleSearch = useCallback((q: string) => {
+    setSearchQuery(q)
+    if (searchTimeout.current) clearTimeout(searchTimeout.current)
+    if (!q.trim() || !authUser) { setSearchResults([]); return }
+    searchTimeout.current = setTimeout(async () => {
+      setSearchLoading(true)
+      try {
+        const results = await searchUsers(q, authUser.id)
+        setSearchResults(results)
+      } finally {
+        setSearchLoading(false)
+      }
+    }, 350)
+  }, [authUser])
+
+  const handleToggleFollow = async (targetId: string, isFollowing: boolean) => {
+    if (!authUser) return
+    setSearchResults((prev) => prev.map((u) => u.id === targetId ? { ...u, isFollowing: !isFollowing } : u))
+    try {
+      if (isFollowing) await unfollowUser(authUser.id, targetId)
+      else await followUser(authUser.id, targetId)
+    } catch {
+      setSearchResults((prev) => prev.map((u) => u.id === targetId ? { ...u, isFollowing } : u))
+    }
+  }
 
   useSocialRealtime(authUser?.id)
   useSocialPresence(authUser?.id, user?.username, user?.avatar)
@@ -284,7 +316,73 @@ export const FriendsPage: React.FC = () => {
       {/* ── AMIGOS ─────────────────────────────────────── */}
       {activeTab === 'friends' && (
         <div className="px-4 flex flex-col gap-3">
-          {friends.map((friend) => {
+
+          {/* Search bar */}
+          <div className="relative">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-forge-white/30 pointer-events-none" />
+            <input
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder="Buscar atletas por nombre o @usuario..."
+              className="w-full pl-9 pr-9 py-3 rounded-2xl text-sm text-forge-white outline-none"
+              style={{ backgroundColor: '#13131A', border: '1px solid rgba(255,255,255,0.08)' }}
+            />
+            {searchQuery && (
+              <button onClick={() => { setSearchQuery(''); setSearchResults([]) }} className="absolute right-3 top-1/2 -translate-y-1/2 text-forge-white/30">
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Search results */}
+          {searchQuery.trim() && (
+            <div className="flex flex-col gap-2">
+              <p className="text-xs text-forge-white/30 px-1">
+                {searchLoading ? 'Buscando...' : searchResults.length === 0 ? 'Sin resultados' : `${searchResults.length} atleta${searchResults.length > 1 ? 's' : ''} encontrado${searchResults.length > 1 ? 's' : ''}`}
+              </p>
+              {searchResults.map((result) => (
+                <motion.div
+                  key={result.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="card-metal p-3 flex items-center gap-3"
+                >
+                  <div className="w-10 h-10 rounded-full overflow-hidden bg-forge-border flex-shrink-0">
+                    {result.avatar
+                      ? <img src={result.avatar} alt="" className="w-full h-full object-cover" />
+                      : <div className="w-full h-full bg-forge-orange/20 flex items-center justify-center text-forge-orange font-bold text-sm">
+                          {result.displayName[0]?.toUpperCase()}
+                        </div>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-forge-white text-sm">{result.displayName}</div>
+                    <div className="text-xs text-forge-white/40">@{result.username}</div>
+                  </div>
+                  <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => handleToggleFollow(result.id, result.isFollowing)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex-shrink-0"
+                    style={{
+                      backgroundColor: result.isFollowing ? 'rgba(255,255,255,0.06)' : 'rgba(255,107,26,1)',
+                      color: result.isFollowing ? 'rgba(255,255,255,0.5)' : 'white',
+                    }}
+                  >
+                    {result.isFollowing ? <><UserCheck size={12} /> Siguiendo</> : <><UserPlus size={12} /> Seguir</>}
+                  </motion.button>
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {/* Friends list — only show when not searching */}
+          {!searchQuery && friends.length === 0 && (
+            <div className="text-center py-10">
+              <Users size={36} className="text-forge-white/10 mx-auto mb-3" />
+              <p className="text-forge-white/30 text-sm font-medium">Aún no sigues a nadie</p>
+              <p className="text-forge-white/20 text-xs mt-1">Busca atletas arriba para empezar</p>
+            </div>
+          )}
+          {!searchQuery && friends.map((friend) => {
             const rankData = RANK_DATA[friend.rankTier]
             const isOnline = onlineUsers.some((u) => u.username === friend.username)
             return (

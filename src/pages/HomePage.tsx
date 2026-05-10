@@ -7,6 +7,8 @@ import { useRanksStore } from '../store/ranksStore'
 import { RANK_DATA } from '../data/ranks'
 import { EXERCISES } from '../data/exercises'
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { WorkoutHeatmap } from '../components/WorkoutHeatmap'
+import { ExerciseProgressChart } from '../components/ExerciseProgressChart'
 
 interface HomePageProps {
   onStartWorkout: (routineId: string) => void
@@ -311,6 +313,16 @@ export const HomePage: React.FC<HomePageProps> = ({ onStartWorkout, onNavigate }
             </ResponsiveContainer>
           </div>
         </div>
+      </motion.div>
+
+      {/* ── HEATMAP ──────────────────────────────────────── */}
+      <motion.div variants={stagger.item} className="px-4">
+        <WorkoutHeatmap />
+      </motion.div>
+
+      {/* ── EXERCISE PROGRESS ────────────────────────────── */}
+      <motion.div variants={stagger.item} className="px-4">
+        <ExerciseProgressChart />
       </motion.div>
 
       {/* ── MUSCLE RANKS ─────────────────────────────────── */}

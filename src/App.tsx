@@ -7,6 +7,7 @@ import { useWorkoutStore } from './store/workoutStore'
 import { BottomNav } from './components/BottomNav'
 import { Sidebar } from './components/Sidebar'
 import { InstallPrompt } from './components/InstallPrompt'
+import { AchievementModal } from './components/AchievementModal'
 import { AuthPage } from './pages/AuthPage'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { HomePage } from './pages/HomePage'
@@ -354,6 +355,7 @@ function App() {
         </div>
         <RightPanel />
         <InstallPrompt />
+        <AchievementModal />
       </div>
     )
   }
@@ -369,6 +371,7 @@ function App() {
       </div>
       <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
       <InstallPrompt />
+      <AchievementModal />
     </div>
   )
 }

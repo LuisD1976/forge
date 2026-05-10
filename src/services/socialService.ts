@@ -43,12 +43,27 @@ export function dbRowToPost(row: DBPostRow, likedIds: Set<string> = new Set()): 
 }
 
 export async function fetchFeedPosts(currentUserId?: string, limit = 30): Promise<SocialPost[]> {
-  const { data, error } = await supabase
+  let filterIds: string[] | null = null
+
+  if (currentUserId) {
+    const { data: follows } = await supabase
+      .from('friendships')
+      .select('following_id')
+      .eq('follower_id', currentUserId)
+    if (follows && follows.length > 0) {
+      filterIds = [currentUserId, ...follows.map((f: { following_id: string }) => f.following_id)]
+    }
+  }
+
+  let query = supabase
     .from('social_posts')
     .select('id, user_id, content, image_url, workout_summary, likes_count, comments_count, created_at, profiles(username, display_name, avatar_url)')
     .order('created_at', { ascending: false })
     .limit(limit)
 
+  if (filterIds) query = query.in('user_id', filterIds)
+
+  const { data, error } = await query
   if (error || !data) throw new Error(error?.message ?? 'fetch failed')
 
   let likedIds = new Set<string>()
@@ -144,6 +159,34 @@ export async function unfollowUser(followerId: string, followingId: string): Pro
     .delete()
     .match({ follower_id: followerId, following_id: followingId })
   if (error) throw error
+}
+
+export async function searchUsers(query: string, currentUserId: string): Promise<{
+  id: string; username: string; displayName: string; avatar: string; isFollowing: boolean
+}[]> {
+  if (!query.trim()) return []
+  const { data } = await supabase
+    .from('profiles')
+    .select('id, username, display_name, avatar_url')
+    .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
+    .neq('id', currentUserId)
+    .limit(10)
+  if (!data || data.length === 0) return []
+
+  const { data: follows } = await supabase
+    .from('friendships')
+    .select('following_id')
+    .eq('follower_id', currentUserId)
+    .in('following_id', data.map((u: { id: string }) => u.id))
+
+  const followedIds = new Set((follows ?? []).map((f: { following_id: string }) => f.following_id))
+  return (data as { id: string; username: string; display_name: string; avatar_url: string | null }[]).map((u) => ({
+    id: u.id,
+    username: u.username,
+    displayName: u.display_name,
+    avatar: u.avatar_url ?? '',
+    isFollowing: followedIds.has(u.id),
+  }))
 }
 
 export async function fetchLeaderboardFromDB() {

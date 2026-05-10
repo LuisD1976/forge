@@ -7,6 +7,7 @@ import {
 import { useWorkoutStore } from '../store/workoutStore'
 import { useRanksStore } from '../store/ranksStore'
 import { usePRStore } from '../store/prStore'
+import { useAchievementsStore } from '../store/achievementsStore'
 import { EXERCISES } from '../data/exercises'
 import { SetLogger } from '../components/SetLogger'
 import { WorkoutTimer } from '../components/WorkoutTimer'
@@ -28,9 +29,10 @@ interface WorkoutPageProps {
 }
 
 export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onClose }) => {
-  const { routines, activeWorkout, startWorkout, addSet, updateSet, toggleSetComplete, finishWorkout, cancelWorkout, addRoutine } = useWorkoutStore()
+  const { routines, sessions, activeWorkout, startWorkout, addSet, updateSet, toggleSetComplete, finishWorkout, cancelWorkout, addRoutine, getStreak } = useWorkoutStore()
   const { addXP, updateRank, muscleRanks } = useRanksStore()
-  const { checkAndUpdatePR } = usePRStore()
+  const { checkAndUpdatePR, records: prRecords } = usePRStore()
+  const { unlock: unlockAchievements } = useAchievementsStore()
 
   const [view, setView] = useState<WorkoutView>(activeWorkout ? 'active' : 'routines')
   const [currentExerciseIdx, setCurrentExerciseIdx] = useState(0)
@@ -112,6 +114,15 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
 
     setCompletedSession(session)
     setNewPRs(prs)
+
+    // Check achievements
+    const totalVolumeKg = sessions.reduce((t, s) => t + s.totalVolume, 0) / 1000 + session.totalVolume / 1000
+    unlockAchievements({
+      totalWorkouts: sessions.length + 1,
+      streak: getStreak(),
+      totalVolumeKg,
+      prCount: prRecords.length + prs.length,
+    })
 
     if (rankUps.length > 0) {
       setRankUpQueue(rankUps.slice(1))
