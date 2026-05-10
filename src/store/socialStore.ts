@@ -107,7 +107,7 @@ export const useSocialStore = create<SocialState>()(
     }),
     {
       name: 'forge-social',
-      // Don't persist ephemeral state
+      version: 1,
       partialize: (state) => ({
         posts: state.posts,
         friends: state.friends,

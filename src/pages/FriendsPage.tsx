@@ -359,6 +359,12 @@ export const FriendsPage: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-2">
+            {leaderboard.length === 0 && (
+              <div className="card-metal p-6 text-center">
+                <Trophy size={32} className="text-forge-white/20 mx-auto mb-2" />
+                <p className="text-forge-white/40 text-sm">El ranking se llenará con los primeros atletas que entrenen esta semana.</p>
+              </div>
+            )}
             {leaderboard.map((entry, i) => {
               const rankData = RANK_DATA[entry.tier]
               const isMe = entry.username === 'tú' || entry.username === user?.username
