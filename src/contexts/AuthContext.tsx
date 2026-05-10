@@ -70,23 +70,58 @@ function profileToStoreUser(p: DBProfile): UserProfile {
   }
 }
 
-async function loadProfileIntoStore(userId: string): Promise<boolean> {
+async function loadProfileIntoStore(
+  userId: string,
+  authMeta?: { email?: string | null; user_metadata?: Record<string, unknown> | null }
+): Promise<boolean> {
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', userId)
     .single()
 
-  if (error || !data) return false
+  if (error || !data) {
+    // Perfil no existe — crear uno por defecto con los datos de auth
+    if (authMeta) {
+      const email = authMeta.email ?? ''
+      const displayName = (authMeta.user_metadata?.display_name as string) || email.split('@')[0] || 'Forjador'
+      const username = displayName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').slice(0, 30) || `user${userId.slice(0, 6)}`
+
+      const { data: created } = await supabase
+        .from('profiles')
+        .upsert({
+          id: userId, username, display_name: displayName,
+          goal: 'muscle', experience: 'beginner', equipment: 'gym',
+          onboarding_complete: false, streak: 0, total_workouts: 0, is_pro: false,
+        }, { onConflict: 'id' })
+        .select()
+        .single()
+
+      if (created) {
+        const profile = created as unknown as DBProfile
+        useUserStore.setState({ user: profileToStoreUser(profile), isOnboardingComplete: false })
+        return true
+      }
+    }
+    return false
+  }
 
   const profile = data as unknown as DBProfile
+
+  // Reconciliación: si el store local dice "completado" pero la DB dice no,
+  // confiamos en el local y actualizamos la DB silenciosamente
+  const localComplete = useUserStore.getState().isOnboardingComplete
+  if (!profile.onboarding_complete && localComplete) {
+    profile.onboarding_complete = true
+    void supabase.from('profiles').update({ onboarding_complete: true }).eq('id', userId)
+  }
+
   useUserStore.setState({
     user: profileToStoreUser(profile),
     isOnboardingComplete: profile.onboarding_complete,
   })
   return true
 }
-
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -103,7 +138,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session)
         setUser(session?.user ?? null)
         if (session?.user) {
-          loadProfileIntoStore(session.user.id)
+          loadProfileIntoStore(session.user.id, {
+            email: session.user.email,
+            user_metadata: session.user.user_metadata,
+          })
             .catch(console.error)
             .finally(() => { if (mounted) setProfileLoading(false) })
         } else {
@@ -117,13 +155,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .finally(() => { if (mounted) setLoading(false) })
 
-    // Escucha cambios posteriores (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return
       setSession(session)
       setUser(session?.user ?? null)
       if (event === 'SIGNED_IN' && session?.user) {
-        loadProfileIntoStore(session.user.id).catch(console.error)
+        loadProfileIntoStore(session.user.id, {
+          email: session.user.email,
+          user_metadata: session.user.user_metadata,
+        }).catch(console.error)
       }
       if (event === 'SIGNED_OUT') {
         useUserStore.getState().reset()
@@ -142,7 +182,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signUp = async (email: string, password: string, displayName: string) => {
-    // Pasamos display_name en metadata para que el trigger handle_new_user lo use
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -161,7 +200,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .from('profiles')
       .update({ ...updates, updated_at: new Date().toISOString() } as never)
       .eq('id', user.id)
-    if (!error) await loadProfileIntoStore(user.id)
+    if (!error) {
+      await loadProfileIntoStore(user.id, {
+        email: user.email,
+        user_metadata: user.user_metadata,
+      })
+    }
     return { error }
   }
 

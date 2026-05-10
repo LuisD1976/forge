@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronRight, ChevronLeft, Star, Check } from 'lucide-react'
 import { useUserStore } from '../store/userStore'
 import { useWorkoutStore } from '../store/workoutStore'
+import { useAuth } from '../contexts/AuthContext'
 import type { QuestionnaireAnswers, Routine } from '../types'
 import { AreaChart, Area, ResponsiveContainer } from 'recharts'
 import { generatePersonalizedPlan } from '../utils/claudeAPI'
@@ -278,6 +279,7 @@ type Phase = 'slides' | 'questions' | 'personal_data' | 'counter' | 'reviews' | 
 export const OnboardingPage: React.FC = () => {
   const { completeOnboarding, activatePro, user } = useUserStore()
   const { addRoutine } = useWorkoutStore()
+  const { updateProfile } = useAuth()
   const displayName = user?.displayName ?? 'Atleta'
 
   const [phase, setPhase] = useState<Phase>('slides')
@@ -360,6 +362,16 @@ export const OnboardingPage: React.FC = () => {
     generatedPlan.forEach(r => addRoutine(r))
     completeOnboarding(finalAnswers)
     if (pro) activatePro()
+
+    // Guardar en Supabase para que no vuelva a salir en próximas sesiones
+    updateProfile({
+      onboarding_complete: true,
+      questionnaire: finalAnswers,
+      goal: finalAnswers.goal,
+      experience: finalAnswers.experience,
+      equipment: finalAnswers.equipment,
+      weight: finalAnswers.weight,
+    }).catch(console.error)
   }
 
   // ── Slides ──
