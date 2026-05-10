@@ -33,7 +33,7 @@ function percentileToTier(percentile: number): RankTier {
 const initialRanks: MuscleRank[] = MUSCLES.map((muscle) => ({
   muscle,
   tier: 'hierro',
-  percentile: 5,
+  percentile: 0,
   oneRM: 0,
   xp: 0,
   nextLevelXp: 500,
@@ -82,6 +82,6 @@ export const useRanksStore = create<RanksState>()(
         return muscleRanks.filter((r) => r.oneRM > 0).length
       },
     }),
-    { name: 'forge-ranks' }
+    { name: 'forge-ranks', version: 1 }
   )
 )

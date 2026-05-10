@@ -38,7 +38,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       weeklyVolume: Array.from({ length: 7 }, (_, i) => {
         const d = new Date()
         d.setDate(d.getDate() - (6 - i))
-        return { day: d.toLocaleDateString('es', { weekday: 'short' }), volume: Math.floor(Math.random() * 8000 + 2000) }
+        return { day: d.toLocaleDateString('es', { weekday: 'short' }), volume: 0 }
       }),
 
       addRoutine: (routine) =>
@@ -112,7 +112,11 @@ export const useWorkoutStore = create<WorkoutState>()(
           totalVolume,
           xpGained: Math.round(totalVolume / 100) + duration * 2,
         }
-        set({ sessions: [session, ...sessions], activeWorkout: null })
+        const todayLabel = new Date().toLocaleDateString('es', { weekday: 'short' })
+        const updatedVolume = get().weeklyVolume.map((d) =>
+          d.day === todayLabel ? { ...d, volume: d.volume + totalVolume } : d
+        )
+        set({ sessions: [session, ...sessions], activeWorkout: null, weeklyVolume: updatedVolume })
         return session
       },
 
@@ -140,6 +144,6 @@ export const useWorkoutStore = create<WorkoutState>()(
         return streak
       },
     }),
-    { name: 'forge-workouts' }
+    { name: 'forge-workouts', version: 1 }
   )
 )
