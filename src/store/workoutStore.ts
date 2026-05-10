@@ -18,6 +18,7 @@ interface WorkoutState {
   weeklyVolume: { day: string; volume: number }[]
 
   loadSessions: (sessions: WorkoutSession[]) => void
+  loadRoutines: (routines: Routine[]) => void
   addRoutine: (routine: Routine) => void
   removeRoutine: (id: string) => void
   startWorkout: (routine: Routine) => void
@@ -58,6 +59,8 @@ export const useWorkoutStore = create<WorkoutState>()(
           weeklyVolume: state.weeklyVolume.map((d) => ({ ...d, volume: volume[d.day] ?? 0 })),
         }))
       },
+
+      loadRoutines: (routines) => set({ routines }),
 
       addRoutine: (routine) =>
         set((state) => ({ routines: [...state.routines, routine] })),

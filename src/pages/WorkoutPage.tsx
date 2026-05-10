@@ -13,7 +13,7 @@ import { WorkoutTimer } from '../components/WorkoutTimer'
 import { RankUpModal } from '../components/RankUpModal'
 import { estimateOneRM, calculateXPForSet } from '../utils/rankCalculator'
 import { generateRoutineWithAI } from '../utils/claudeAPI'
-import { syncWorkoutSession, syncMuscleRanks } from '../lib/sync'
+import { syncWorkoutSession, syncMuscleRanks, syncRoutine } from '../lib/sync'
 import { supabase } from '../lib/supabase'
 import type { MuscleGroup, RankTier, PersonalRecord } from '../types'
 import { RANK_ORDER } from '../data/ranks'
@@ -151,6 +151,9 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
     setAiLoading(false)
     if (routine) {
       addRoutine(routine)
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user) syncRoutine(routine, user.id).catch(console.error)
+      })
       setAiSuccessName(routine.name)
       setTimeout(() => { setView('routines'); setAiSuccessName(null) }, 2000)
     } else {

@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { WorkoutSession, MuscleRank } from '../types'
+import type { WorkoutSession, MuscleRank, Routine } from '../types'
 
 export async function syncWorkoutSession(session: WorkoutSession, userId: string) {
   await supabase.from('workout_sessions').upsert({
@@ -61,5 +61,42 @@ export async function loadMuscleRanks(userId: string): Promise<MuscleRank[]> {
     oneRM: r.one_rm,
     xp: r.xp,
     nextLevelXp: r.next_level_xp,
+  }))
+}
+
+export async function syncRoutine(routine: Routine, userId: string) {
+  await supabase.from('routines').upsert({
+    id: routine.id,
+    user_id: userId,
+    name: routine.name,
+    description: routine.description,
+    exercises: routine.exercises as never,
+    frequency: routine.frequency,
+    category: routine.category,
+    difficulty: routine.difficulty,
+    is_ai_generated: routine.isAIGenerated ?? false,
+  } as never, { onConflict: 'id' })
+}
+
+export async function deleteRoutine(routineId: string) {
+  await supabase.from('routines').delete().eq('id', routineId)
+}
+
+export async function loadUserRoutines(userId: string): Promise<Routine[]> {
+  const { data } = await supabase
+    .from('routines')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true })
+  if (!data) return []
+  return (data as any[]).map((r) => ({
+    id: r.id,
+    name: r.name,
+    description: r.description,
+    exercises: r.exercises,
+    frequency: r.frequency,
+    category: r.category,
+    difficulty: r.difficulty,
+    isAIGenerated: r.is_ai_generated,
   }))
 }

@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useUserStore } from '../store/userStore'
 import { useWorkoutStore } from '../store/workoutStore'
 import { useRanksStore } from '../store/ranksStore'
-import { loadUserWorkouts, loadMuscleRanks } from '../lib/sync'
+import { loadUserWorkouts, loadMuscleRanks, loadUserRoutines } from '../lib/sync'
 import type { UserProfile, QuestionnaireAnswers } from '../types'
 
 interface DBProfile {
@@ -74,12 +74,14 @@ function profileToStoreUser(p: DBProfile): UserProfile {
 }
 
 async function loadUserDataIntoStores(userId: string) {
-  const [workouts, ranks] = await Promise.all([
+  const [workouts, ranks, routines] = await Promise.all([
     loadUserWorkouts(userId),
     loadMuscleRanks(userId),
+    loadUserRoutines(userId),
   ])
   if (workouts.length > 0) useWorkoutStore.getState().loadSessions(workouts)
   if (ranks.length > 0) useRanksStore.getState().loadRanks(ranks)
+  if (routines.length > 0) useWorkoutStore.getState().loadRoutines(routines)
 }
 
 async function loadProfileIntoStore(
