@@ -2,6 +2,9 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { useUserStore } from '../store/userStore'
+import { useWorkoutStore } from '../store/workoutStore'
+import { useRanksStore } from '../store/ranksStore'
+import { loadUserWorkouts, loadMuscleRanks } from '../lib/sync'
 import type { UserProfile, QuestionnaireAnswers } from '../types'
 
 interface DBProfile {
@@ -68,6 +71,15 @@ function profileToStoreUser(p: DBProfile): UserProfile {
     onboardingComplete: p.onboarding_complete,
     questionnaire: p.questionnaire as unknown as QuestionnaireAnswers | undefined,
   }
+}
+
+async function loadUserDataIntoStores(userId: string) {
+  const [workouts, ranks] = await Promise.all([
+    loadUserWorkouts(userId),
+    loadMuscleRanks(userId),
+  ])
+  if (workouts.length > 0) useWorkoutStore.getState().loadSessions(workouts)
+  if (ranks.length > 0) useRanksStore.getState().loadRanks(ranks)
 }
 
 async function loadProfileIntoStore(
@@ -138,10 +150,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session)
         setUser(session?.user ?? null)
         if (session?.user) {
-          loadProfileIntoStore(session.user.id, {
-            email: session.user.email,
-            user_metadata: session.user.user_metadata,
-          })
+          const uid = session.user.id
+          Promise.all([
+            loadProfileIntoStore(uid, {
+              email: session.user.email,
+              user_metadata: session.user.user_metadata,
+            }),
+            loadUserDataIntoStores(uid),
+          ])
             .catch(console.error)
             .finally(() => { if (mounted) setProfileLoading(false) })
         } else {
@@ -160,10 +176,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session)
       setUser(session?.user ?? null)
       if (event === 'SIGNED_IN' && session?.user) {
-        loadProfileIntoStore(session.user.id, {
+        const uid = session.user.id
+        loadProfileIntoStore(uid, {
           email: session.user.email,
           user_metadata: session.user.user_metadata,
         }).catch(console.error)
+        loadUserDataIntoStores(uid).catch(console.error)
       }
       if (event === 'SIGNED_OUT') {
         useUserStore.getState().reset()

@@ -17,6 +17,7 @@ interface WorkoutState {
   activeWorkout: ActiveWorkout | null
   weeklyVolume: { day: string; volume: number }[]
 
+  loadSessions: (sessions: WorkoutSession[]) => void
   addRoutine: (routine: Routine) => void
   removeRoutine: (id: string) => void
   startWorkout: (routine: Routine) => void
@@ -40,6 +41,23 @@ export const useWorkoutStore = create<WorkoutState>()(
         d.setDate(d.getDate() - (6 - i))
         return { day: d.toLocaleDateString('es', { weekday: 'short' }), volume: 0 }
       }),
+
+      loadSessions: (sessions) => {
+        const volume: Record<string, number> = {}
+        const now = new Date()
+        sessions.forEach((s) => {
+          const d = new Date(s.date)
+          const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000)
+          if (diffDays >= 0 && diffDays < 7) {
+            const label = d.toLocaleDateString('es', { weekday: 'short' })
+            volume[label] = (volume[label] ?? 0) + s.totalVolume
+          }
+        })
+        set((state) => ({
+          sessions,
+          weeklyVolume: state.weeklyVolume.map((d) => ({ ...d, volume: volume[d.day] ?? 0 })),
+        }))
+      },
 
       addRoutine: (routine) =>
         set((state) => ({ routines: [...state.routines, routine] })),

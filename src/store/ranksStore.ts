@@ -6,6 +6,7 @@ interface RanksState {
   muscleRanks: MuscleRank[]
   totalXP: number
   initRanks: () => void
+  loadRanks: (ranks: MuscleRank[]) => void
   updateRank: (muscle: MuscleGroup, oneRM: number) => void
   addXP: (muscle: MuscleGroup, xp: number) => void
   getOverallTier: () => RankTier
@@ -46,6 +47,11 @@ export const useRanksStore = create<RanksState>()(
       totalXP: 0,
 
       initRanks: () => set({ muscleRanks: initialRanks }),
+
+      loadRanks: (ranks) => {
+        const totalXP = ranks.reduce((t, r) => t + r.xp, 0)
+        set({ muscleRanks: ranks, totalXP })
+      },
 
       updateRank: (muscle, oneRM) =>
         set((state) => {
