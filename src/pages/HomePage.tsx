@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, type Variants } from 'framer-motion'
 import { Flame, Play, ChevronRight, Zap, TrendingUp, Dumbbell, Clock } from 'lucide-react'
 import { useUserStore } from '../store/userStore'
 import { useWorkoutStore } from '../store/workoutStore'
@@ -84,7 +84,7 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: { valu
   )
 }
 
-const stagger = {
+const stagger: { container: Variants; item: Variants } = {
   container: { hidden: {}, show: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } } },
   item: { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: 'easeOut' } } },
 }

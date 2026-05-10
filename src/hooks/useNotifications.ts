@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
-import { timeAgoFromDate } from '../services/socialService'
 
 export interface AppNotification {
   id: string
