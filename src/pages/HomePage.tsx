@@ -829,6 +829,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onStartWorkout, onNavigate }
   const recentSessions = sessions.slice(0, 3)
 
   return (
+    <>
     <motion.div
       variants={stagger.container}
       initial="hidden"
@@ -1620,6 +1621,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onStartWorkout, onNavigate }
         }
       }}
     />
+    </>
   )
 }
 
