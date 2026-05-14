@@ -128,39 +128,55 @@ const GOAL_TABS = [
 
 const WARMUP_ITEMS = [
   {
-    title: 'Movilidad articular', duration: '7 min', level: 'Principiante', emoji: '🔄', color: '#60A5FA',
+    title: 'Movilidad articular',
+    duration: '7 min', level: 'Principiante', emoji: '🔄', color: '#60A5FA',
+    desc: 'Desbloquea tus articulaciones antes de cualquier entrenamiento. Reduce el riesgo de lesión y mejora el rango de movimiento.',
+    benefits: ['Lubrica las articulaciones', 'Aumenta el rango de movimiento', 'Previene lesiones', 'Activa la circulación'],
     routineId: 'warmup_mobility',
     exercises: [
-      { exerciseId: 'lunge', sets: 2, reps: '10', rest: 20 },
-      { exerciseId: 'plank', sets: 2, reps: '20s', rest: 20 },
-      { exerciseId: 'push_up', sets: 2, reps: '8', rest: 20 },
+      { exerciseId: 'lunge', sets: 2, reps: '10 c/lado', rest: 15, tip: 'Mueve la cadera lentamente en cada repetición' },
+      { exerciseId: 'squat', sets: 2, reps: '12', rest: 15, tip: 'Sentadilla lenta, enfócate en la flexión de cadera' },
+      { exerciseId: 'calf_raise', sets: 2, reps: '15', rest: 15, tip: 'Pausa 2 segundos arriba, baja lento' },
+      { exerciseId: 'hip_thrust', sets: 2, reps: '10', rest: 15, tip: 'Activa glúteos antes del entreno pesado' },
     ],
   },
   {
-    title: 'Calentamiento dinámico', duration: '10 min', level: 'Todos', emoji: '🔥', color: '#FF6B1A',
+    title: 'Calentamiento dinámico',
+    duration: '10 min', level: 'Todos', emoji: '🔥', color: '#FF6B1A',
+    desc: 'Eleva la temperatura corporal y activa todos los grupos musculares. Prepara tu cuerpo para el máximo rendimiento.',
+    benefits: ['Eleva temperatura muscular', 'Activa sistema nervioso', 'Mejora la coordinación', 'Maximiza el rendimiento'],
     routineId: 'warmup_dynamic',
     exercises: [
-      { exerciseId: 'squat', sets: 2, reps: '15', rest: 20 },
-      { exerciseId: 'push_up', sets: 2, reps: '12', rest: 20 },
-      { exerciseId: 'lunge', sets: 2, reps: '10', rest: 20 },
+      { exerciseId: 'squat', sets: 2, reps: '20', rest: 20, tip: 'Peso corporal, ritmo moderado y constante' },
+      { exerciseId: 'push_up', sets: 2, reps: '15', rest: 20, tip: 'Activa pecho y hombros antes del entreno' },
+      { exerciseId: 'lunge', sets: 2, reps: '12 c/lado', rest: 20, tip: 'Alterna piernas con fluidez y control' },
+      { exerciseId: 'face_pull', sets: 2, reps: '15', rest: 20, tip: 'Activa el manguito rotador y previene lesiones de hombro' },
     ],
   },
   {
-    title: 'Estiramientos completos', duration: '15 min', level: 'Todos', emoji: '🧘', color: '#4ADE80',
+    title: 'Estiramientos completos',
+    duration: '15 min', level: 'Todos', emoji: '🧘', color: '#4ADE80',
+    desc: 'Estiramiento total del cuerpo. Ideal post-entreno o en días de descanso activo para recuperar la flexibilidad.',
+    benefits: ['Reduce el dolor muscular', 'Acelera la recuperación', 'Mejora la flexibilidad', 'Reduce el cortisol'],
     routineId: 'warmup_stretch',
     exercises: [
-      { exerciseId: 'plank', sets: 3, reps: '30s', rest: 15 },
-      { exerciseId: 'lunge', sets: 2, reps: '10', rest: 20 },
-      { exerciseId: 'crunch', sets: 2, reps: '15', rest: 15 },
+      { exerciseId: 'plank', sets: 3, reps: '30s', rest: 15, tip: 'Mantén la respiración profunda y el core activo' },
+      { exerciseId: 'romanian_deadlift', sets: 2, reps: '10', rest: 20, tip: 'Sin peso, siente el estiramiento de isquios al bajar' },
+      { exerciseId: 'lunge', sets: 2, reps: '10 c/lado', rest: 20, tip: 'Mantén cada posición 3 segundos para estirar la cadera' },
+      { exerciseId: 'calf_raise', sets: 2, reps: '15', rest: 15, tip: 'Rango completo, pausa abajo para estirar el gemelo' },
     ],
   },
   {
-    title: 'Activación de core', duration: '8 min', level: 'Intermedio', emoji: '⚡', color: '#C084FC',
+    title: 'Activación de core',
+    duration: '8 min', level: 'Intermedio', emoji: '⚡', color: '#C084FC',
+    desc: 'Activa y estabiliza la zona central antes de levantamientos pesados. Core fuerte = más fuerza en todo.',
+    benefits: ['Estabiliza la columna', 'Aumenta la fuerza de transferencia', 'Mejora la postura', 'Previene lesiones de espalda'],
     routineId: 'warmup_core',
     exercises: [
-      { exerciseId: 'plank', sets: 3, reps: '40s', rest: 20 },
-      { exerciseId: 'crunch', sets: 3, reps: '20', rest: 20 },
-      { exerciseId: 'push_up', sets: 2, reps: '12', rest: 20 },
+      { exerciseId: 'plank', sets: 3, reps: '45s', rest: 20, tip: 'Aprieta glúteos y abdomen al máximo' },
+      { exerciseId: 'crunch', sets: 3, reps: '20', rest: 20, tip: 'Exhala al subir, no jales el cuello' },
+      { exerciseId: 'hip_thrust', sets: 2, reps: '15', rest: 20, tip: 'Contrae el core en la posición alta' },
+      { exerciseId: 'push_up', sets: 2, reps: '12', rest: 20, tip: 'Mantén el cuerpo rígido como una tabla' },
     ],
   },
 ]
@@ -342,6 +358,165 @@ const ChartTooltip = ({ active, payload }: { active?: boolean; payload?: { value
 }
 
 // ─────────────────────────────────────────────
+// Warmup Detail Modal
+// ─────────────────────────────────────────────
+function WarmupDetailModal({
+  item, onClose, onStart,
+}: {
+  item: typeof WARMUP_ITEMS[0] | null
+  onClose: () => void
+  onStart: () => void
+}) {
+  return (
+    <AnimatePresence>
+      {item && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            key="backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 z-40"
+            style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }}
+          />
+
+          {/* Sheet */}
+          <motion.div
+            key="sheet"
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 380, damping: 36 }}
+            className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl overflow-hidden"
+            style={{
+              background: 'linear-gradient(160deg, #1A1A26 0%, #0F0F18 100%)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              maxHeight: '90dvh',
+              overflowY: 'auto',
+            }}
+          >
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.15)' }} />
+            </div>
+
+            {/* Color accent line */}
+            <div className="h-0.5 mx-6 rounded-full mb-5" style={{ background: `linear-gradient(90deg, ${item.color}, transparent)` }} />
+
+            <div className="px-5 pb-8">
+
+              {/* Header */}
+              <div className="flex items-start gap-4 mb-5">
+                <div
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
+                  style={{ background: `${item.color}15`, border: `1px solid ${item.color}30` }}
+                >
+                  {item.emoji}
+                </div>
+                <div className="flex-1">
+                  <h2 className="font-display text-2xl text-white leading-tight">{item.title.toUpperCase()}</h2>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                      style={{ background: `${item.color}18`, color: item.color, border: `1px solid ${item.color}30` }}>
+                      {item.duration}
+                    </span>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                      style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      {item.level}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              <p className="text-sm leading-relaxed mb-5" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                {item.desc}
+              </p>
+
+              {/* Benefits */}
+              <div className="grid grid-cols-2 gap-2 mb-5">
+                {item.benefits.map((b, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold"
+                    style={{ background: `${item.color}10`, border: `1px solid ${item.color}20`, color: item.color }}
+                  >
+                    <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: item.color }} />
+                    {b}
+                  </div>
+                ))}
+              </div>
+
+              {/* Exercise list */}
+              <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                Ejercicios · {item.exercises.length} movimientos
+              </p>
+              <div className="flex flex-col gap-2.5 mb-6">
+                {item.exercises.map((ex, i) => {
+                  const exercise = EXERCISES.find(e => e.id === ex.exerciseId)
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.05 + i * 0.07 }}
+                      className="flex items-center gap-3 p-3 rounded-2xl"
+                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+                    >
+                      <div
+                        className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 font-display text-sm font-bold"
+                        style={{ background: `${item.color}18`, color: item.color, border: `1px solid ${item.color}25` }}
+                      >
+                        {i + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm text-white truncate">{exercise?.name ?? ex.exerciseId}</p>
+                        <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                          {ex.sets} series × {ex.reps} · Descanso {ex.rest}s
+                        </p>
+                        {(ex as any).tip && (
+                          <p className="text-[10px] mt-0.5 italic" style={{ color: item.color + 'BB' }}>
+                            💡 {(ex as any).tip}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+                        {exercise?.muscles.slice(0, 2).map(m => (
+                          <span key={m} className="text-[9px] capitalize px-1.5 py-0.5 rounded-full font-semibold"
+                            style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}>
+                            {m}
+                          </span>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )
+                })}
+              </div>
+
+              {/* CTA */}
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={onStart}
+                className="w-full py-4 rounded-2xl font-display text-xl text-white flex items-center justify-center gap-3"
+                style={{
+                  background: `linear-gradient(135deg, ${item.color}, ${item.color}BB)`,
+                  boxShadow: `0 6px 28px ${item.color}40`,
+                }}
+              >
+                <Play size={20} fill="white" />
+                INICIAR {item.title.toUpperCase()}
+              </motion.button>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  )
+}
+
+// ─────────────────────────────────────────────
 // Smart Training System
 // ─────────────────────────────────────────────
 const TRAINING_TYPES_CFG: { id: TrainingType; label: string; icon: React.FC<{ size: number; color?: string }>; grad: string; border: string; color: string }[] = [
@@ -478,6 +653,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onStartWorkout, onNavigate }
   const [searchQuery, setSearchQuery] = useState('')
   const [activeGoalTab, setActiveGoalTab] = useState('muscle')
   const [activeFilters, setActiveFilters] = useState<string[]>([])
+
+  // Warmup modal
+  const [selectedWarmup, setSelectedWarmup] = useState<typeof WARMUP_ITEMS[0] | null>(null)
 
   // Smart training system
   const [trainingType, setTrainingType] = useState<TrainingType>('gym')
@@ -1170,7 +1348,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onStartWorkout, onNavigate }
             <motion.button
               key={i}
               whileTap={{ scale: 0.93 }}
-              onClick={() => handleStartWarmup(w)}
+              onClick={() => setSelectedWarmup(w)}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.1 + i * 0.06 }}
@@ -1430,6 +1608,18 @@ export const HomePage: React.FC<HomePageProps> = ({ onStartWorkout, onNavigate }
       </motion.div>
 
     </motion.div>
+
+    {/* ── WARMUP DETAIL MODAL ──────────────────────── */}
+    <WarmupDetailModal
+      item={selectedWarmup}
+      onClose={() => setSelectedWarmup(null)}
+      onStart={() => {
+        if (selectedWarmup) {
+          handleStartWarmup(selectedWarmup)
+          setSelectedWarmup(null)
+        }
+      }}
+    />
   )
 }
 
