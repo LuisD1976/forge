@@ -252,23 +252,137 @@ function SearchBar({ query, onChange, onClear }: { query: string; onChange: (v: 
   )
 }
 
+// Challenge detail modal
+function ChallengeDetailModal({
+  c, onClose, onStart,
+}: {
+  c: typeof CHALLENGES[0] | null
+  onClose: () => void
+  onStart: () => void
+}) {
+  return (
+    <AnimatePresence>
+      {c && (
+        <>
+          <motion.div
+            key="cbdrop"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 z-40"
+            style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)' }}
+          />
+          <motion.div
+            key="cbsheet"
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 380, damping: 36 }}
+            className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl overflow-hidden"
+            style={{ background: '#0F0F18', border: '1px solid rgba(255,255,255,0.08)', maxHeight: '90dvh', overflowY: 'auto' }}
+          >
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.15)' }} />
+            </div>
+
+            {/* Hero banner */}
+            <div className="mx-4 mb-5 rounded-3xl overflow-hidden relative" style={{ height: 130, background: c.gradient }}>
+              <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg,rgba(0,0,0,0.25) 0%,transparent 60%)' }} />
+              <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent)' }} />
+              <div className="absolute top-4 right-5 text-5xl opacity-80">{c.emoji}</div>
+              <div className="relative p-5">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">{c.days} días · {c.subtitle}</span>
+                <h2 className="font-display text-3xl text-white leading-tight mt-0.5" style={{ whiteSpace: 'pre-line' }}>{c.title}</h2>
+              </div>
+            </div>
+
+            <div className="px-4 pb-8">
+              {/* Description */}
+              <p className="text-sm leading-relaxed mb-5" style={{ color: 'rgba(255,255,255,0.5)' }}>{c.desc}</p>
+
+              {/* Stats row */}
+              <div className="flex gap-2 mb-5">
+                {[
+                  { label: 'Duración', value: `${c.days} días` },
+                  { label: 'Ejercicios', value: `${c.exercises.length} por sesión` },
+                  { label: 'Nivel', value: 'Intermedio' },
+                ].map((s) => (
+                  <div key={s.label} className="flex-1 rounded-2xl p-3 text-center" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <p className="font-bold text-white text-sm">{s.value}</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>{s.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Exercise list */}
+              <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                Ejercicios de la sesión
+              </p>
+              <div className="flex flex-col gap-2.5 mb-6">
+                {c.exercises.map((ex, i) => {
+                  const exercise = EXERCISES.find(e => e.id === ex.exerciseId)
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.04 + i * 0.06 }}
+                      className="flex items-center gap-3 p-3 rounded-2xl"
+                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+                    >
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center font-display text-sm font-bold flex-shrink-0"
+                        style={{ background: 'rgba(255,107,26,0.15)', color: '#FF6B1A', border: '1px solid rgba(255,107,26,0.25)' }}>
+                        {i + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm text-white truncate">{exercise?.name ?? ex.exerciseId}</p>
+                        <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                          {ex.sets} series × {ex.reps} · {ex.rest}s descanso
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        {exercise?.muscles.slice(0, 2).map(m => (
+                          <span key={m} className="text-[9px] capitalize px-1.5 py-0.5 rounded-full font-semibold"
+                            style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)' }}>
+                            {m}
+                          </span>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )
+                })}
+              </div>
+
+              {/* CTA */}
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={onStart}
+                className="w-full py-4 rounded-2xl font-display text-xl text-white flex items-center justify-center gap-3"
+                style={{ background: c.gradient, boxShadow: `0 6px 28px ${c.glow}` }}
+              >
+                <Play size={20} fill="white" />
+                EMPEZAR DESAFÍO
+              </motion.button>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  )
+}
+
 // Challenge carousel card
-function ChallengeCard({ c, delay, onStart }: { c: typeof CHALLENGES[0]; delay: number; onStart: () => void }) {
+function ChallengeCard({ c, delay, onOpen }: { c: typeof CHALLENGES[0]; delay: number; onOpen: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0, x: 30 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay, duration: 0.4 }}
       whileTap={{ scale: 0.96 }}
-      onClick={onStart}
+      onClick={onOpen}
       className="flex-shrink-0 snap-start rounded-3xl overflow-hidden relative cursor-pointer"
       style={{ width: 260, height: 160, background: c.gradient, boxShadow: `0 8px 32px ${c.glow}` }}
     >
-      {/* Depth overlay */}
       <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(0,0,0,0.2) 0%, transparent 60%)' }} />
-      {/* Emoji */}
       <div className="absolute top-4 right-4 text-4xl opacity-80">{c.emoji}</div>
-      {/* Shimmer line */}
       <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)' }} />
 
       <div className="relative p-5 flex flex-col justify-between h-full">
@@ -280,11 +394,11 @@ function ChallengeCard({ c, delay, onStart }: { c: typeof CHALLENGES[0]; delay: 
           <p className="text-[11px] text-white/60 max-w-[140px] leading-tight">{c.desc}</p>
           <motion.div
             whileTap={{ scale: 0.88 }}
-            className="px-4 py-2 rounded-xl font-bold text-xs text-white flex items-center gap-1"
+            className="px-4 py-2 rounded-xl font-bold text-xs text-white flex items-center gap-1.5"
             style={{ background: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.35)' }}
           >
             <Play size={10} fill="white" />
-            INICIO
+            VER MÁS
           </motion.div>
         </div>
       </div>
@@ -656,6 +770,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onStartWorkout, onNavigate }
 
   // Warmup modal
   const [selectedWarmup, setSelectedWarmup] = useState<typeof WARMUP_ITEMS[0] | null>(null)
+  // Challenge modal
+  const [selectedChallenge, setSelectedChallenge] = useState<typeof CHALLENGES[0] | null>(null)
 
   // Smart training system
   const [trainingType, setTrainingType] = useState<TrainingType>('gym')
@@ -1014,7 +1130,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onStartWorkout, onNavigate }
         </div>
         <div className="flex gap-3 px-4 overflow-x-auto snap-x snap-mandatory pb-1" style={{ scrollbarWidth: 'none' }}>
           {CHALLENGES.map((c, i) => (
-            <ChallengeCard key={c.id} c={c} delay={i * 0.07} onStart={() => handleStartChallenge(c)} />
+            <ChallengeCard key={c.id} c={c} delay={i * 0.07} onOpen={() => setSelectedChallenge(c)} />
           ))}
         </div>
       </motion.div>
@@ -1618,6 +1734,18 @@ export const HomePage: React.FC<HomePageProps> = ({ onStartWorkout, onNavigate }
         if (selectedWarmup) {
           handleStartWarmup(selectedWarmup)
           setSelectedWarmup(null)
+        }
+      }}
+    />
+
+    {/* ── CHALLENGE DETAIL MODAL ───────────────────── */}
+    <ChallengeDetailModal
+      c={selectedChallenge}
+      onClose={() => setSelectedChallenge(null)}
+      onStart={() => {
+        if (selectedChallenge) {
+          handleStartChallenge(selectedChallenge)
+          setSelectedChallenge(null)
         }
       }}
     />
