@@ -162,4 +162,4 @@ export interface PersonalRecord {
   date: string
 }
 
-export type NavTab = 'home' | 'ranks' | 'add' | 'friends' | 'profile'
+export type NavTab = 'home' | 'ranks' | 'add' | 'friends' | 'profile' | 'coach'

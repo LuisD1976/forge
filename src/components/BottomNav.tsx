@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Home, BarChart2, Plus, Users, User } from 'lucide-react'
+import { Home, BarChart2, Plus, Users, User, Sparkles } from 'lucide-react'
 import type { NavTab } from '../types'
 
 interface BottomNavProps {
@@ -13,6 +13,7 @@ const TABS: { id: NavTab; icon: React.ElementType; label: string }[] = [
   { id: 'home', icon: Home, label: 'Inicio' },
   { id: 'ranks', icon: BarChart2, label: 'Rangos' },
   { id: 'add', icon: Plus, label: '' },
+  { id: 'coach', icon: Sparkles, label: 'Coach' },
   { id: 'friends', icon: Users, label: 'Social' },
   { id: 'profile', icon: User, label: 'Perfil' },
 ]
@@ -34,7 +35,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange, no
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
-                className="relative -top-5"
+                className="flex flex-col items-center gap-1 -top-3 relative"
               >
                 <motion.div
                   whileTap={{ scale: 0.88 }}
@@ -46,6 +47,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange, no
                 >
                   <Plus size={28} />
                 </motion.div>
+                <span
+                  className="text-[10px] font-bold"
+                  style={{ color: isActive ? '#FF6B1A' : 'rgba(245,245,240,0.5)' }}
+                >
+                  Entrenar
+                </span>
               </button>
             )
           }
@@ -67,12 +74,21 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange, no
               </div>
 
               <motion.div whileTap={{ scale: 0.82 }} className="relative">
-                <Icon
-                  size={22}
-                  className="transition-colors duration-200"
-                  style={{ color: isActive ? '#FF6B1A' : 'rgba(245,245,240,0.35)' }}
-                />
-                {tab.id === 'friends' && notificationCount > 0 && (
+                {tab.id === 'coach' && isActive ? (
+                  <div
+                    className="w-7 h-7 rounded-lg flex items-center justify-center"
+                    style={{ background: 'linear-gradient(135deg, #FF6B1A, #FFA052)', boxShadow: '0 0 10px rgba(255,107,26,0.6)' }}
+                  >
+                    <Sparkles size={15} className="text-white" />
+                  </div>
+                ) : (
+                  <Icon
+                    size={22}
+                    className="transition-colors duration-200"
+                    style={{ color: isActive ? '#FF6B1A' : 'rgba(245,245,240,0.35)' }}
+                  />
+                )}
+                {tab.id !== 'coach' && tab.id === 'friends' && notificationCount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-3.5 px-0.5 rounded-full text-[8px] font-bold text-white flex items-center justify-center" style={{ backgroundColor: '#EF4444' }}>
                     {notificationCount > 9 ? '9+' : notificationCount}
                   </span>

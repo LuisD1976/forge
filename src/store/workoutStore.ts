@@ -29,6 +29,8 @@ interface WorkoutState {
   cancelWorkout: () => void
   getTotalVolume: () => number
   getStreak: () => number
+  addExerciseToWorkout: (exerciseId: string, sets?: number) => void
+  replaceExercise: (exerciseIndex: number, newExerciseId: string) => void
 }
 
 export const useWorkoutStore = create<WorkoutState>()(
@@ -115,6 +117,24 @@ export const useWorkoutStore = create<WorkoutState>()(
           const sets = [...exercises[exerciseIndex].sets]
           sets[setIndex] = { ...sets[setIndex], completed: !sets[setIndex].completed }
           exercises[exerciseIndex] = { ...exercises[exerciseIndex], sets }
+          return { activeWorkout: { ...state.activeWorkout, exercises } }
+        }),
+
+      addExerciseToWorkout: (exerciseId, sets = 3) =>
+        set((state) => {
+          if (!state.activeWorkout) return state
+          const newEx: WorkoutExercise = {
+            exerciseId,
+            sets: Array.from({ length: sets }, () => ({ id: crypto.randomUUID(), weight: 0, reps: 0, completed: false })),
+          }
+          return { activeWorkout: { ...state.activeWorkout, exercises: [...state.activeWorkout.exercises, newEx] } }
+        }),
+
+      replaceExercise: (exerciseIndex, newExerciseId) =>
+        set((state) => {
+          if (!state.activeWorkout) return state
+          const exercises = [...state.activeWorkout.exercises]
+          exercises[exerciseIndex] = { ...exercises[exerciseIndex], exerciseId: newExerciseId }
           return { activeWorkout: { ...state.activeWorkout, exercises } }
         }),
 

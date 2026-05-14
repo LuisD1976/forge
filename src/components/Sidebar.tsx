@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Flame, Dumbbell, Trophy, Users, User, Crown, Zap } from 'lucide-react'
+import { Flame, Dumbbell, Trophy, Users, User, Crown, Zap, Sparkles } from 'lucide-react'
 import { useUserStore } from '../store/userStore'
 import { useRanksStore } from '../store/ranksStore'
 import { RANK_DATA } from '../data/ranks'
@@ -14,6 +14,7 @@ interface SidebarProps {
 const NAV_ITEMS = [
   { id: 'home' as NavTab, icon: Dumbbell, label: 'Entrenar' },
   { id: 'ranks' as NavTab, icon: Trophy, label: 'Rangos' },
+  { id: 'coach' as NavTab, icon: Sparkles, label: 'Coach IA' },
   { id: 'friends' as NavTab, icon: Users, label: 'Amigos' },
   { id: 'profile' as NavTab, icon: User, label: 'Perfil' },
 ]

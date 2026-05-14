@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Play, ChevronRight, X, Check, Clock, Dumbbell,
+  ChevronRight, X, Check, Clock,
   ChevronLeft, Sparkles, Trophy,
 } from 'lucide-react'
+import { SmartWorkoutHub } from '../components/SmartWorkoutHub'
+import { ExerciseAnimation } from '../components/ExerciseAnimation'
+import { ExercisePicker } from '../components/ExercisePicker'
 import { useWorkoutStore } from '../store/workoutStore'
 import { useRanksStore } from '../store/ranksStore'
 import { usePRStore } from '../store/prStore'
@@ -29,7 +32,7 @@ interface WorkoutPageProps {
 }
 
 export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onClose }) => {
-  const { routines, sessions, activeWorkout, startWorkout, addSet, updateSet, toggleSetComplete, finishWorkout, cancelWorkout, addRoutine, getStreak } = useWorkoutStore()
+  const { routines, sessions, activeWorkout, startWorkout, addSet, updateSet, toggleSetComplete, finishWorkout, cancelWorkout, addRoutine, getStreak, addExerciseToWorkout, replaceExercise } = useWorkoutStore()
   const { addXP, updateRank, muscleRanks } = useRanksStore()
   const { checkAndUpdatePR, records: prRecords } = usePRStore()
   const { unlock: unlockAchievements } = useAchievementsStore()
@@ -47,6 +50,9 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
   const [aiParams, setAiParams] = useState({ goal: 'ganar músculo', days: 3, equipment: 'gimnasio', level: 'intermedio' })
   const [rankUpQueue, setRankUpQueue] = useState<RankUpEvent[]>([])
   const [currentRankUp, setCurrentRankUp] = useState<RankUpEvent | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerMode, setPickerMode] = useState<'add' | 'replace'>('add')
+  const [replaceIdx, setReplaceIdx] = useState<number | null>(null)
 
   // Auto-start if routineId provided
   useEffect(() => {
@@ -172,10 +178,6 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
     }
   }
 
-  const categoryColors: Record<string, string> = {
-    push: '#FF6B1A', pull: '#67E8F9', legs: '#4ADE80',
-    fullbody: '#A855F7', hiit: '#EF4444', custom: '#FFA052',
-  }
 
   if (view === 'ai') {
     return (
@@ -284,61 +286,120 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
   }
 
   if (view === 'summary' && completedSession) {
-    return (
-      <div className="flex flex-col min-h-screen bg-forge-black items-center justify-center p-6 text-center">
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring' }} className="text-6xl mb-4">
-          🔥
-        </motion.div>
-        <h2 className="text-2xl font-bold text-forge-white mb-2">¡Entreno completado!</h2>
-        <p className="text-forge-white/50 mb-6">{completedSession.name}</p>
+    const totalCompletedSets = completedSession.exercises?.reduce((t: number, ex: any) => t + (ex.sets?.filter((s: any) => s.completed)?.length ?? 0), 0) ?? 0
 
-        <div className="w-full max-w-sm grid grid-cols-3 gap-3 mb-4">
-          <div className="card-metal p-3 text-center">
-            <div className="text-xl font-bold text-forge-orange">{completedSession.duration}</div>
-            <div className="text-xs text-forge-white/40">minutos</div>
-          </div>
-          <div className="card-metal p-3 text-center">
-            <div className="text-xl font-bold text-forge-white">{(completedSession.totalVolume / 1000).toFixed(1)}t</div>
-            <div className="text-xs text-forge-white/40">volumen</div>
-          </div>
-          <div className="card-metal p-3 text-center">
-            <div className="text-xl font-bold text-forge-green">+{completedSession.xpGained}</div>
-            <div className="text-xs text-forge-white/40">XP ganados</div>
-          </div>
+    return (
+      <div className="flex flex-col min-h-screen pb-8 overflow-y-auto" style={{ background: 'linear-gradient(160deg, #1a0a00 0%, #0D0D0F 50%)' }}>
+        {/* Hero area */}
+        <div className="flex flex-col items-center pt-16 pb-8 px-6 text-center relative overflow-hidden">
+          {/* Background glow */}
+          <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,107,26,0.15) 0%, transparent 65%)' }} />
+
+          <motion.div
+            initial={{ scale: 0, rotate: -10 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+            className="text-7xl mb-4"
+          >
+            🔥
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+            <p className="text-sm font-bold uppercase tracking-widest mb-2" style={{ color: '#FF6B1A' }}>ENTRENO COMPLETADO</p>
+            <h2 className="font-display text-4xl text-white leading-tight">{completedSession.name}</h2>
+            <p className="text-sm mt-2" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              {new Date(completedSession.date).toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </p>
+          </motion.div>
         </div>
+
+        {/* Stats grid */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="px-4 mb-4"
+        >
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: 'Minutos', value: completedSession.duration, color: '#FF6B1A', emoji: '⏱' },
+              { label: 'Volumen', value: `${(completedSession.totalVolume / 1000).toFixed(1)}t`, color: '#60A5FA', emoji: '📊' },
+              { label: 'XP ganados', value: `+${completedSession.xpGained}`, color: '#4ADE80', emoji: '⚡' },
+            ].map((s, i) => (
+              <motion.div
+                key={s.label}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 + i * 0.07 }}
+                className="rounded-2xl p-3.5 text-center"
+                style={{ background: `${s.color}10`, border: `1px solid ${s.color}25` }}
+              >
+                <div className="text-xl mb-0.5">{s.emoji}</div>
+                <div className="font-display text-xl text-white">{s.value}</div>
+                <div className="text-[10px] mt-0.5 uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.3)' }}>{s.label}</div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Sets completed */}
+        {totalCompletedSets > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+            className="px-4 mb-4"
+          >
+            <div className="rounded-2xl p-4 text-center" style={{ background: 'rgba(255,107,26,0.07)', border: '1px solid rgba(255,107,26,0.2)' }}>
+              <p className="font-display text-3xl text-white">{totalCompletedSets}</p>
+              <p className="text-xs mt-1 uppercase tracking-wider" style={{ color: 'rgba(255,255,255,0.35)' }}>series completadas</p>
+            </div>
+          </motion.div>
+        )}
 
         {/* Personal Records */}
         {newPRs.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="w-full max-w-sm card-metal p-4 mb-4"
-            style={{ borderColor: '#FFD70040' }}
+            transition={{ delay: 0.4 }}
+            className="px-4 mb-4"
           >
-            <div className="flex items-center gap-2 mb-3">
-              <Trophy size={16} style={{ color: '#FFD700' }} />
-              <span className="font-bold text-forge-white text-sm">¡Nuevos récords personales!</span>
-            </div>
-            <div className="flex flex-col gap-2">
-              {newPRs.map((pr) => (
-                <div key={pr.exerciseId} className="flex items-center justify-between text-xs">
-                  <span className="text-forge-white/70 truncate flex-1">{pr.exerciseName}</span>
-                  <span className="font-mono font-bold ml-2" style={{ color: '#FFD700' }}>
-                    {pr.weight}kg × {pr.reps} ({pr.oneRM.toFixed(0)} 1RM)
-                  </span>
-                </div>
-              ))}
+            <div className="rounded-2xl p-4" style={{ background: 'rgba(255,215,0,0.07)', border: '1px solid rgba(255,215,0,0.3)' }}>
+              <div className="flex items-center gap-2 mb-3">
+                <Trophy size={16} style={{ color: '#FFD700' }} />
+                <span className="font-bold text-white text-sm">¡Nuevos récords personales! 🏆</span>
+              </div>
+              <div className="flex flex-col gap-2">
+                {newPRs.map((pr) => (
+                  <div key={pr.exerciseId} className="flex items-center justify-between text-xs">
+                    <span className="truncate flex-1" style={{ color: 'rgba(255,255,255,0.6)' }}>{pr.exerciseName}</span>
+                    <span className="font-mono font-bold ml-3 flex-shrink-0" style={{ color: '#FFD700' }}>
+                      {pr.weight}kg × {pr.reps}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </motion.div>
         )}
 
-        <button
-          onClick={() => { setView('routines'); onClose?.() }}
-          className="btn-forge w-full max-w-sm py-4"
+        {/* CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45 }}
+          className="px-4 flex flex-col gap-2"
         >
-          Volver al inicio
-        </button>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => { setView('routines'); onClose?.() }}
+            className="w-full py-4 rounded-2xl font-bold text-white font-display text-xl"
+            style={{ background: 'linear-gradient(135deg, #FF6B1A, #FFA052)', boxShadow: '0 6px 30px rgba(255,107,26,0.4)' }}
+          >
+            SEGUIR FORJANDO ⚡
+          </motion.button>
+        </motion.div>
       </div>
     )
   }
@@ -350,63 +411,86 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
       (t, ex) => t + ex.sets.filter((s) => s.completed).length, 0
     )
     const totalSets = activeWorkout.exercises.reduce((t, ex) => t + ex.sets.length, 0)
+    const liveVolume = activeWorkout.exercises.reduce((t, ex) =>
+      t + ex.sets.filter(s => s.completed).reduce((s2, s) => s2 + s.weight * s.reps, 0), 0
+    )
+    const progressPct = totalSets > 0 ? (completedSets / totalSets) * 100 : 0
 
     return (
       <div className="flex flex-col min-h-screen bg-forge-black pb-8">
         {/* Header */}
-        <div className="bg-forge-iron border-b border-forge-border px-4 pt-12 pb-4">
-          <div className="flex items-center justify-between mb-3">
-            <button onClick={handleCancel} className="text-forge-white/50 hover:text-forge-red transition-colors">
-              <X size={22} />
+        <div className="px-4 pt-12 pb-4" style={{ background: 'linear-gradient(180deg, #13131A 0%, #0D0D10 100%)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="flex items-center justify-between mb-4">
+            <button onClick={handleCancel} className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors" style={{ background: 'rgba(255,255,255,0.05)' }}>
+              <X size={18} style={{ color: 'rgba(255,255,255,0.4)' }} />
             </button>
             <div className="text-center">
-              <h2 className="font-semibold text-forge-white text-sm">{activeWorkout.name}</h2>
-              <div className="flex items-center gap-2 justify-center text-forge-white/50 text-xs">
-                <Clock size={12} />
-                <span className="font-mono">{formatElapsed(elapsed)}</span>
+              <h2 className="font-bold text-white text-sm truncate max-w-[160px]">{activeWorkout.name}</h2>
+              <div className="flex items-center gap-2 justify-center mt-0.5">
+                <div className="flex items-center gap-1 text-[11px] font-mono" style={{ color: '#FF6B1A' }}>
+                  <Clock size={10} />
+                  {formatElapsed(elapsed)}
+                </div>
+                {liveVolume > 0 && (
+                  <span className="text-[11px] font-mono" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                    · {(liveVolume / 1000).toFixed(1)}t
+                  </span>
+                )}
               </div>
             </div>
-            <button onClick={handleFinish} className="text-forge-orange text-sm font-semibold">
-              Terminar
+            <button
+              onClick={handleFinish}
+              className="px-3 py-2 rounded-xl text-xs font-bold"
+              style={{ background: 'linear-gradient(135deg, #4ADE80, #22c55e)', color: '#fff', boxShadow: '0 2px 10px rgba(74,222,128,0.3)' }}
+            >
+              Finalizar
             </button>
           </div>
 
-          {/* Progress */}
+          {/* Progress bar */}
           <div>
-            <div className="flex justify-between text-xs text-forge-white/40 mb-1">
-              <span>{completedSets} series completadas</span>
-              <span>{totalSets} totales</span>
+            <div className="flex justify-between text-[10px] mb-1.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              <span>{completedSets} / {totalSets} series</span>
+              <span className="font-bold" style={{ color: progressPct === 100 ? '#4ADE80' : '#FF6B1A' }}>
+                {Math.round(progressPct)}%
+              </span>
             </div>
-            <div className="h-1.5 bg-forge-border rounded-full overflow-hidden">
-              <div
-                className="h-full bg-forge-orange rounded-full transition-all duration-500"
-                style={{ width: `${totalSets > 0 ? (completedSets / totalSets) * 100 : 0}%` }}
+            <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+              <motion.div
+                className="h-full rounded-full"
+                style={{ background: progressPct === 100 ? 'linear-gradient(90deg,#4ADE80,#22c55e)' : 'linear-gradient(90deg,#FF6B1A,#FFA052)' }}
+                animate={{ width: `${progressPct}%` }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
               />
             </div>
           </div>
         </div>
 
         {/* Exercise tabs */}
-        <div className="flex gap-2 px-4 py-3 overflow-x-auto">
+        <div className="flex gap-2 px-4 py-3 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
           {activeWorkout.exercises.map((ex, i) => {
             const exData = EXERCISES.find((e) => e.id === ex.exerciseId)
             const done = ex.sets.filter((s) => s.completed).length
             const total = ex.sets.length
             const isActive = i === currentExerciseIdx
+            const isDone = done === total && total > 0
             return (
-              <button
+              <motion.button
                 key={i}
+                whileTap={{ scale: 0.94 }}
                 onClick={() => setCurrentExerciseIdx(i)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium transition-all border ${
-                  isActive
-                    ? 'bg-forge-orange text-white border-forge-orange'
-                    : done === total && total > 0
-                    ? 'bg-forge-green/20 border-forge-green/40 text-forge-green'
-                    : 'bg-forge-border border-forge-border text-forge-white/60'
-                }`}
+                className="flex-shrink-0 px-3 py-1.5 rounded-2xl text-xs font-semibold transition-all flex items-center gap-1.5"
+                style={{
+                  background: isActive ? '#FF6B1A' : isDone ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.05)',
+                  color: isActive ? '#fff' : isDone ? '#4ADE80' : 'rgba(255,255,255,0.5)',
+                  border: isActive ? 'none' : isDone ? '1px solid rgba(74,222,128,0.35)' : '1px solid rgba(255,255,255,0.07)',
+                  boxShadow: isActive ? '0 2px 12px rgba(255,107,26,0.4)' : 'none',
+                }}
               >
-                {exData?.name.split(' ')[0] ?? ex.exerciseId} {done}/{total}
-              </button>
+                {isDone && <Check size={10} />}
+                {exData?.name.split(' ')[0] ?? ex.exerciseId}
+                <span className="font-mono text-[10px] opacity-70">{done}/{total}</span>
+              </motion.button>
             )
           })}
         </div>
@@ -414,22 +498,40 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
         {/* Current Exercise */}
         {exercise && currentEx && (
           <div className="flex-1 px-4">
-            <div className="card-metal p-4 mb-4">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentExerciseIdx}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="rounded-3xl overflow-hidden mb-4"
+                style={{ background: 'linear-gradient(160deg,rgba(40,38,55,0.7),rgba(18,17,25,0.9))', border: '1px solid rgba(60,58,80,0.6)', backdropFilter: 'blur(12px)' }}
+              >
+              <div className="h-px" style={{ background: 'linear-gradient(90deg,transparent,rgba(255,107,26,0.5),rgba(255,160,82,0.3),transparent)' }} />
+              <div className="p-4">
               <div className="flex items-start gap-3 mb-4">
-                <img
-                  src={exercise.imageUrl}
-                  alt={exercise.name}
-                  className="w-16 h-16 rounded-xl object-cover bg-forge-border"
-                />
-                <div>
-                  <h3 className="font-bold text-forge-white">{exercise.name}</h3>
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'rgba(255,107,26,0.12)', border: '1.5px solid rgba(255,107,26,0.25)' }}>
+                  <ExerciseAnimation exerciseId={exercise.id} muscles={exercise.muscles} color="#FF6B1A" size={52} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-white text-base">{exercise.name}</h3>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {exercise.muscles.map((m) => (
-                      <span key={m} className="text-xs bg-forge-border text-forge-white/60 px-2 py-0.5 rounded-full capitalize">
+                      <span key={m} className="text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize"
+                        style={{ background: 'rgba(255,107,26,0.12)', color: '#FF6B1A', border: '1px solid rgba(255,107,26,0.2)' }}>
                         {m}
                       </span>
                     ))}
                   </div>
+                  <button
+                    onClick={() => { setPickerMode('replace'); setReplaceIdx(currentExerciseIdx); setPickerOpen(true) }}
+                    className="text-xs mt-2 font-semibold"
+                    style={{ color: 'rgba(255,255,255,0.35)' }}
+                  >
+                    Cambiar →
+                  </button>
                 </div>
               </div>
 
@@ -451,7 +553,9 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
                   addSet(exIdx, { weight: 0, reps: 0, completed: false })
                 }}
               />
-            </div>
+              </div>
+              </motion.div>
+            </AnimatePresence>
 
             {/* Rest Timer */}
             <AnimatePresence>
@@ -479,132 +583,83 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
             </AnimatePresence>
 
             {/* Navigation */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 mb-3">
               {currentExerciseIdx > 0 && (
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
                   onClick={() => setCurrentExerciseIdx((i) => i - 1)}
-                  className="btn-secondary flex-1 flex items-center justify-center gap-2"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-sm"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}
                 >
-                  <ChevronLeft size={18} />
+                  <ChevronLeft size={16} />
                   Anterior
-                </button>
+                </motion.button>
               )}
               {currentExerciseIdx < activeWorkout.exercises.length - 1 && (
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
                   onClick={() => setCurrentExerciseIdx((i) => i + 1)}
-                  className="btn-forge flex-1 flex items-center justify-center gap-2"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm text-white"
+                  style={{ background: 'linear-gradient(135deg, #FF6B1A, #FFA052)', boxShadow: '0 4px 16px rgba(255,107,26,0.35)' }}
                 >
                   Siguiente
-                  <ChevronRight size={18} />
-                </button>
+                  <ChevronRight size={16} />
+                </motion.button>
               )}
               {currentExerciseIdx === activeWorkout.exercises.length - 1 && (
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
                   onClick={handleFinish}
-                  className="btn-forge flex-1 flex items-center justify-center gap-2 bg-forge-green"
-                  style={{ background: 'linear-gradient(135deg, #4ADE80, #22c55e)' }}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm text-white"
+                  style={{ background: 'linear-gradient(135deg, #4ADE80, #22c55e)', boxShadow: '0 4px 16px rgba(74,222,128,0.4)' }}
                 >
-                  <Check size={18} />
-                  Finalizar
-                </button>
+                  <Check size={16} />
+                  Finalizar entreno
+                </motion.button>
               )}
             </div>
+
+            {/* Add exercise button */}
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => { setPickerMode('add'); setPickerOpen(true) }}
+              className="w-full h-11 rounded-2xl flex items-center justify-center gap-2 text-sm font-semibold"
+              style={{ border: '1.5px dashed rgba(255,107,26,0.35)', color: 'rgba(255,107,26,0.7)', backgroundColor: 'rgba(255,107,26,0.04)' }}
+            >
+              + Agregar ejercicio
+            </motion.button>
           </div>
         )}
+
+        {/* Exercise Picker */}
+        <ExercisePicker
+          isOpen={pickerOpen}
+          onClose={() => setPickerOpen(false)}
+          multiSelect={pickerMode === 'add'}
+          title={pickerMode === 'add' ? 'Agregar Ejercicio' : 'Cambiar Ejercicio'}
+          onConfirm={(exercises) => {
+            if (pickerMode === 'add') {
+              exercises.forEach(ex => addExerciseToWorkout(ex.id))
+            } else if (pickerMode === 'replace' && replaceIdx !== null && exercises[0]) {
+              replaceExercise(replaceIdx, exercises[0].id)
+            }
+          }}
+        />
       </div>
     )
   }
 
-  // Routines list view
+  // Training hub view
   return (
-    <div className="flex flex-col pb-24">
-      <div className="px-4 pt-12 pb-4">
-        <h1 className="font-display text-3xl text-gradient-forge">ENTRENAR</h1>
-        <p className="text-forge-white/50 text-sm">Elige o crea tu rutina</p>
-      </div>
-
-      {/* AI Button */}
-      <div className="mx-4 mb-4">
-        <button
-          onClick={() => setView('ai')}
-          className="w-full card-metal p-4 flex items-center gap-4 border-forge-orange/30 hover:border-forge-orange/60 transition-all"
-        >
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #FF6B1A, #FFA052)' }}>
-            <Sparkles size={22} className="text-white" />
-          </div>
-          <div className="text-left">
-            <div className="font-bold text-forge-white">Generar con FORGE IA</div>
-            <div className="text-xs text-forge-white/50">Plan 100% personalizado para ti</div>
-          </div>
-          <ChevronRight size={18} className="ml-auto text-forge-orange" />
-        </button>
-      </div>
-
-      {/* Routines */}
-      <div className="px-4">
-        <h3 className="font-semibold text-forge-white mb-3">Rutinas disponibles</h3>
-        <div className="flex flex-col gap-3">
-          {routines.map((routine) => {
-            const color = categoryColors[routine.category] ?? '#FF6B1A'
-            return (
-              <motion.div
-                key={routine.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="card-metal p-4"
-                style={{ borderColor: `${color}20` }}
-              >
-                <div className="flex items-start gap-3 mb-3">
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: `${color}20`, color }}
-                  >
-                    <Dumbbell size={18} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-forge-white">{routine.name}</div>
-                    <div className="text-xs text-forge-white/50 mt-0.5">{routine.description}</div>
-                  </div>
-                  {routine.isAIGenerated && (
-                    <span className="text-xs bg-forge-orange/20 text-forge-orange px-2 py-0.5 rounded-full flex-shrink-0">IA</span>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-3 mb-3 text-xs text-forge-white/50">
-                  <span>{routine.exercises.length} ejercicios</span>
-                  <span>•</span>
-                  <span>{routine.frequency}</span>
-                  <span>•</span>
-                  <div className="flex gap-0.5">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="w-1.5 h-1.5 rounded-full"
-                        style={{ backgroundColor: i < routine.difficulty ? color : '#2A2A30' }}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      startWorkout(routine)
-                      setView('active')
-                    }}
-                    className="btn-forge flex-1 flex items-center justify-center gap-2 py-2 text-sm"
-                  >
-                    <Play size={14} />
-                    Iniciar
-                  </button>
-                </div>
-              </motion.div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Rank-up celebration */}
+    <>
+      <SmartWorkoutHub
+        onStartRoutine={(routineId) => {
+          const routine = routines.find(r => r.id === routineId)
+          if (routine) { startWorkout(routine); setView('active') }
+        }}
+        onStartFree={() => setView('ai')}
+        onOpenAI={() => setView('ai')}
+      />
       {currentRankUp && (
         <RankUpModal
           muscle={currentRankUp.muscle}
@@ -614,7 +669,7 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
           onClose={handleRankUpClose}
         />
       )}
-    </div>
+    </>
   )
 }
 

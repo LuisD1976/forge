@@ -240,44 +240,26 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onUpgrade, onAICoach, 
         </div>
       </div>
 
-      {/* PRO Upgrade or AI Coach */}
-      {!user.isPro ? (
-        <div className="mx-4 mb-4">
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            onClick={() => onUpgrade ? onUpgrade() : setShowProModal(true)}
-            className="w-full rounded-2xl p-4 flex items-center gap-4 text-left"
-            style={{ background: 'linear-gradient(135deg, #FF6B1A 0%, #FFA052 100%)' }}
+      {/* AI Coach */}
+      <div className="mx-4 mb-4">
+        <motion.button
+          whileTap={{ scale: 0.98 }}
+          onClick={() => onAICoach?.()}
+          className="w-full rounded-2xl p-4 flex items-center gap-4 text-left"
+          style={{ background: 'linear-gradient(135deg, #FF6B1A 0%, #FFA052 100%)', boxShadow: '0 8px 32px rgba(255,107,26,0.4)' }}
+        >
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-white/20"
           >
-            <Crown size={28} className="text-white flex-shrink-0" />
-            <div>
-              <div className="font-bold text-white">Hazte FORGE PRO</div>
-              <div className="text-white/80 text-xs">IA, análisis avanzado y rangos completos</div>
-            </div>
-            <ChevronRight size={20} className="text-white ml-auto" />
-          </motion.button>
-        </div>
-      ) : (
-        <div className="mx-4 mb-4">
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            onClick={() => onAICoach?.()}
-            className="w-full card-metal p-4 flex items-center gap-4 text-left border-forge-orange/30"
-          >
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg, #FF6B1A, #FFA052)' }}
-            >
-              <Sparkles size={18} className="text-white" />
-            </div>
-            <div>
-              <div className="font-bold text-forge-white">Coach IA</div>
-              <div className="text-forge-white/50 text-xs">FORGE IA · Pregunta lo que quieras</div>
-            </div>
-            <ChevronRight size={18} className="text-forge-orange ml-auto" />
-          </motion.button>
-        </div>
-      )}
+            <Sparkles size={18} className="text-white" />
+          </div>
+          <div>
+            <div className="font-bold text-white">Coach IA</div>
+            <div className="text-white/80 text-xs">Tu entrenador personal con IA · Pregunta lo que quieras</div>
+          </div>
+          <ChevronRight size={20} className="text-white ml-auto" />
+        </motion.button>
+      </div>
 
       {/* Settings list */}
       <div className="mx-4">

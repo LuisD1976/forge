@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, Send, Sparkles, Lock, Crown } from 'lucide-react'
+import { ChevronLeft, Send, Sparkles } from 'lucide-react'
 import { useUserStore } from '../store/userStore'
 
 interface Message {
@@ -11,8 +11,9 @@ interface Message {
 }
 
 interface AICoachPageProps {
-  onBack: () => void
-  onUpgrade: () => void
+  onBack?: () => void
+  onUpgrade?: () => void
+  asTab?: boolean
 }
 
 const SUGGESTIONS = [
@@ -24,7 +25,7 @@ const SUGGESTIONS = [
 
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY as string | undefined
 
-export const AICoachPage: React.FC<AICoachPageProps> = ({ onBack, onUpgrade }) => {
+export const AICoachPage: React.FC<AICoachPageProps> = ({ onBack, asTab }) => {
   const { user } = useUserStore()
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -103,34 +104,15 @@ export const AICoachPage: React.FC<AICoachPageProps> = ({ onBack, onUpgrade }) =
     setLoading(false)
   }
 
-  if (!user?.isPro) {
-    return (
-      <div className="min-h-screen bg-forge-black flex flex-col items-center justify-center p-6 text-center">
-        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring' }}>
-          <div className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 bg-forge-iron border border-forge-border">
-            <Lock size={36} className="text-forge-white/30" />
-          </div>
-        </motion.div>
-        <h2 className="font-display text-3xl text-forge-white mb-3">FORGE Coach IA</h2>
-        <p className="text-forge-white/50 mb-8 max-w-xs">
-          El Coach IA está disponible exclusivamente para usuarios FORGE PRO. Desbloquea asesoramiento personalizado con inteligencia artificial.
-        </p>
-        <button onClick={onUpgrade} className="btn-forge px-8 py-4 flex items-center gap-2">
-          <Crown size={18} />
-          Hacerse PRO
-        </button>
-        <button onClick={onBack} className="mt-4 text-forge-white/30 text-sm">Volver</button>
-      </div>
-    )
-  }
-
   return (
-    <div className="flex flex-col h-screen bg-forge-black">
+    <div className="flex flex-col bg-forge-black" style={{ height: asTab ? 'calc(100dvh - 64px)' : '100dvh' }}>
       {/* Header */}
       <div className="bg-forge-iron border-b border-forge-border px-4 pt-12 pb-4 flex items-center gap-3 flex-shrink-0">
-        <button onClick={onBack} className="text-forge-white/50">
-          <ChevronLeft size={24} />
-        </button>
+        {!asTab && onBack && (
+          <button onClick={onBack} className="text-forge-white/50">
+            <ChevronLeft size={24} />
+          </button>
+        )}
         <div
           className="w-8 h-8 rounded-xl flex items-center justify-center"
           style={{ background: 'linear-gradient(135deg, #FF6B1A, #FFA052)' }}
@@ -215,23 +197,30 @@ export const AICoachPage: React.FC<AICoachPageProps> = ({ onBack, onUpgrade }) =
       </div>
 
       {/* Input */}
-      <div className="px-4 pb-6 pt-3 border-t border-forge-border flex-shrink-0 bg-forge-black">
-        <div className="flex gap-2">
+      <div className="px-4 pb-5 pt-3 flex-shrink-0" style={{ borderTop: '1px solid rgba(255,107,26,0.2)', backgroundColor: '#0D0D0F' }}>
+        <div className="flex gap-2 items-center">
           <input
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-            placeholder="Pregunta a tu Coach IA..."
-            className="flex-1 bg-forge-iron border border-forge-border rounded-2xl px-4 py-3 text-forge-white text-sm outline-none focus:border-forge-orange transition-colors"
+            placeholder="Escribe tu pregunta al Coach..."
+            className="flex-1 rounded-2xl px-4 py-3 text-forge-white text-sm outline-none transition-all"
+            style={{
+              backgroundColor: '#1E1E26',
+              border: '1.5px solid rgba(255,107,26,0.35)',
+              color: '#F5F5F0',
+            }}
+            onFocus={e => { e.currentTarget.style.border = '1.5px solid rgba(255,107,26,0.8)' }}
+            onBlur={e => { e.currentTarget.style.border = '1.5px solid rgba(255,107,26,0.35)' }}
           />
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={sendMessage}
             disabled={!input.trim() || loading}
-            className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 disabled:opacity-40"
-            style={{ background: 'linear-gradient(135deg, #FF6B1A, #FFA052)' }}
+            className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 disabled:opacity-40"
+            style={{ background: 'linear-gradient(135deg, #FF6B1A, #FFA052)', boxShadow: '0 4px 16px rgba(255,107,26,0.4)' }}
           >
-            <Send size={16} className="text-white" />
+            <Send size={17} className="text-white" />
           </motion.button>
         </div>
       </div>

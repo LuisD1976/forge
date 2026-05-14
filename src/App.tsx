@@ -216,7 +216,6 @@ function App() {
   const [activeTab, setActiveTab] = useState<NavTab>('home')
   const [pendingRoutineId, setPendingRoutineId] = useState<string | null>(null)
   const [showPricing, setShowPricing] = useState(false)
-  const [showAICoach, setShowAICoach] = useState(false)
   const [showBodyStats, setShowBodyStats] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
 
@@ -240,7 +239,6 @@ function App() {
     setActiveTab(tab)
     if (tab !== 'add') setPendingRoutineId(null)
     setShowPricing(false)
-    setShowAICoach(false)
     setShowBodyStats(false)
     setShowHistory(false)
   }
@@ -299,12 +297,6 @@ function App() {
   if (showPricing)   return <PricingPage onBack={() => setShowPricing(false)} />
   if (showBodyStats) return <BodyStatsPage onBack={() => setShowBodyStats(false)} />
   if (showHistory)   return <HistoryPage onBack={() => setShowHistory(false)} />
-  if (showAICoach)   return (
-    <AICoachPage
-      onBack={() => setShowAICoach(false)}
-      onUpgrade={() => { setShowAICoach(false); setShowPricing(true) }}
-    />
-  )
 
   const renderPage = () => {
     switch (activeTab) {
@@ -326,6 +318,12 @@ function App() {
             <WorkoutPage initialRoutineId={pendingRoutineId} onClose={() => { setPendingRoutineId(null); setActiveTab('home') }} />
           </motion.div>
         )
+      case 'coach':
+        return (
+          <motion.div key="coach" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.1 }} className="flex-1 flex flex-col overflow-hidden">
+            <AICoachPage onBack={() => setActiveTab('home')} asTab />
+          </motion.div>
+        )
       case 'friends':
         return (
           <motion.div key="friends" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.1 }} className="flex-1 overflow-y-auto">
@@ -335,7 +333,7 @@ function App() {
       case 'profile':
         return (
           <motion.div key="profile" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.1 }} className="flex-1 overflow-y-auto">
-            <ProfilePage onUpgrade={() => setShowPricing(true)} onAICoach={() => setShowAICoach(true)} onBodyStats={() => setShowBodyStats(true)} onHistory={() => setShowHistory(true)} />
+            <ProfilePage onUpgrade={() => setShowPricing(true)} onAICoach={() => setActiveTab('coach')} onBodyStats={() => setShowBodyStats(true)} onHistory={() => setShowHistory(true)} />
           </motion.div>
         )
       default: return null
