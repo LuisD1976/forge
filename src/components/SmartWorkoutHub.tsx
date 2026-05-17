@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Play, Sparkles, Zap, Flame, Dumbbell, Wind, TreePine,
   Home, Bike, Activity, Layers, Moon, Brain, Timer,
-  ChevronRight, TrendingUp, Plus, Clock,
+  ChevronRight, TrendingUp, Plus, Clock, CalendarDays, Pencil,
 } from 'lucide-react'
+import { WeeklyPlanSheet } from './WeeklyPlanSheet'
 import { ExerciseAnimation } from './ExerciseAnimation'
 import { useWorkoutStore } from '../store/workoutStore'
 import { useWeeklyPlanStore, WEEK_DAYS, WEEK_DAY_LABELS } from '../store/weeklyPlanStore'
@@ -382,6 +383,7 @@ export const SmartWorkoutHub: React.FC<SmartWorkoutHubProps> = ({ onStartRoutine
   const [content, setContent] = useState<SmartWorkoutContent | null>(null)
   const [loading, setLoading] = useState(false)
   const [showAllExercises, setShowAllExercises] = useState(false)
+  const [showPlanSheet, setShowPlanSheet] = useState(false)
 
   const loadingRef = useRef(false)
 
@@ -708,22 +710,45 @@ export const SmartWorkoutHub: React.FC<SmartWorkoutHubProps> = ({ onStartRoutine
       </AnimatePresence>
 
       {/* ── Weekly plan preview ── */}
-      {activePlan && (
+      {activePlan ? (
         <div className="mx-4 mb-5">
           <div className="flex items-center justify-between mb-3">
             <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.25)' }}>
               Plan activo · {activePlan.name}
             </p>
-            <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.25)' }}>
-              {Object.keys(activePlan.assignments).length} días/semana
-            </span>
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              onClick={() => setShowPlanSheet(true)}
+              className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full"
+              style={{ background: 'rgba(255,107,26,0.12)', color: '#FF6B1A', border: '1px solid rgba(255,107,26,0.25)' }}
+            >
+              <Pencil size={9} />
+              Editar
+            </motion.button>
           </div>
-          <div
-            className="rounded-2xl px-4 py-3.5"
+          <motion.div
+            whileTap={{ scale: 0.99 }}
+            onClick={() => setShowPlanSheet(true)}
+            className="rounded-2xl px-4 py-3.5 cursor-pointer"
             style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
           >
             <WeeklyMiniBar assignments={activePlan.assignments} />
-          </div>
+          </motion.div>
+        </div>
+      ) : (
+        <div className="mx-4 mb-5">
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => setShowPlanSheet(true)}
+            className="w-full py-4 rounded-2xl flex items-center justify-center gap-2.5"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,107,26,0.08), rgba(255,107,26,0.04))',
+              border: '1.5px dashed rgba(255,107,26,0.3)',
+            }}
+          >
+            <CalendarDays size={16} style={{ color: '#FF6B1A' }} />
+            <span className="text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.5)' }}>Crear plan semanal</span>
+          </motion.button>
         </div>
       )}
 
@@ -796,6 +821,13 @@ export const SmartWorkoutHub: React.FC<SmartWorkoutHubProps> = ({ onStartRoutine
           <span className="text-sm font-medium">Entreno libre</span>
         </motion.button>
       </div>
+
+      {/* ── Weekly Plan Sheet ── */}
+      <WeeklyPlanSheet
+        isOpen={showPlanSheet}
+        onClose={() => setShowPlanSheet(false)}
+        onStartRoutine={onStartRoutine}
+      />
     </div>
   )
 }
