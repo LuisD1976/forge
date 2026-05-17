@@ -8,6 +8,7 @@ import {
 import { ExerciseAnimation } from './ExerciseAnimation'
 import { useWorkoutStore } from '../store/workoutStore'
 import { useWeeklyPlanStore, WEEK_DAYS, WEEK_DAY_LABELS } from '../store/weeklyPlanStore'
+import { useUserStore } from '../store/userStore'
 import { EXERCISES } from '../data/exercises'
 import {
   generateSmartContent,
@@ -356,12 +357,28 @@ function WeeklyMiniBar({ assignments }: { assignments: Partial<Record<string, st
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
+// Map user profile → SmartWorkoutHub defaults
+function profileToType(equipment: string | undefined): TrainingType {
+  if (equipment === 'home_weights') return 'home'
+  if (equipment === 'bodyweight') return 'noequip'
+  if (equipment === 'outdoor') return 'outdoor'
+  return 'gym'
+}
+function profileToGoal(goal: string | undefined): TrainingGoal {
+  if (goal === 'fat_loss') return 'burn'
+  if (goal === 'health') return 'cardio'
+  if (goal === 'sport') return 'endurance'
+  if (goal === 'strength') return 'muscle'
+  return 'muscle'
+}
+
 export const SmartWorkoutHub: React.FC<SmartWorkoutHubProps> = ({ onStartRoutine, onStartFree, onOpenAI }) => {
   const { routines, addRoutine } = useWorkoutStore()
   const { plans, getTodayRoutineId } = useWeeklyPlanStore()
+  const { user } = useUserStore()
 
-  const [trainingType, setTrainingType] = useState<TrainingType>('gym')
-  const [goal, setGoal] = useState<TrainingGoal>('muscle')
+  const [trainingType, setTrainingType] = useState<TrainingType>(() => profileToType(user?.equipment))
+  const [goal, setGoal] = useState<TrainingGoal>(() => profileToGoal(user?.goal))
   const [content, setContent] = useState<SmartWorkoutContent | null>(null)
   const [loading, setLoading] = useState(false)
   const [showAllExercises, setShowAllExercises] = useState(false)
@@ -507,6 +524,37 @@ export const SmartWorkoutHub: React.FC<SmartWorkoutHubProps> = ({ onStartRoutine
           })}
         </div>
       </div>
+
+      {/* ── Combination context badge ── */}
+      {goal !== 'ai' && (() => {
+        const typeLabel = TRAINING_TYPES.find(t => t.id === trainingType)?.label ?? trainingType
+        const goalLabel = GOALS.find(g => g.id === goal)?.label ?? goal
+        const typeColor = TYPE_COLORS[trainingType]
+        const goalColor = GOALS.find(g => g.id === goal)?.color ?? '#FF6B1A'
+        return (
+          <div className="px-4 mb-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span
+                className="text-[10px] font-bold px-2.5 py-1 rounded-full"
+                style={{ background: `${typeColor}18`, color: typeColor, border: `1px solid ${typeColor}30` }}
+              >
+                {typeLabel}
+              </span>
+              <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10 }}>+</span>
+              <span
+                className="text-[10px] font-bold px-2.5 py-1 rounded-full"
+                style={{ background: `${goalColor}18`, color: goalColor, border: `1px solid ${goalColor}30` }}
+              >
+                {goalLabel}
+              </span>
+              <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10 }}>→</span>
+              <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                Plan personalizado
+              </span>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── Dynamic content ── */}
       <AnimatePresence mode="wait">
