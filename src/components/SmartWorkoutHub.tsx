@@ -10,7 +10,7 @@ import { useWorkoutStore } from '../store/workoutStore'
 import { useWeeklyPlanStore, WEEK_DAYS, WEEK_DAY_LABELS } from '../store/weeklyPlanStore'
 import { EXERCISES } from '../data/exercises'
 import {
-  generateSmartContent, getExerciseMeta,
+  generateSmartContent,
   type TrainingType, type TrainingGoal, type SmartWorkoutContent, type AIExerciseCard,
 } from '../services/grokWorkoutService'
 import type { Routine } from '../types'
@@ -83,7 +83,6 @@ function ExerciseCard({
   card, accentColor, index, onAdd,
 }: { card: AIExerciseCard; accentColor: string; index: number; onAdd: (exerciseId: string) => void }) {
   const exercise = EXERCISES.find(e => e.id === card.exerciseId)
-  const meta = getExerciseMeta(card.exerciseId)
   const intensityColor = INTENSITY_COLOR[card.intensity] ?? '#FBBF24'
 
   return (

@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Heart, MessageCircle, Share2, Clock, Dumbbell } from 'lucide-react'
+import { Heart, MessageCircle, Share2, Check, Clock, Dumbbell } from 'lucide-react'
 import type { SocialPost } from '../types'
 import { RANK_DATA } from '../data/ranks'
 import { useSocialStore } from '../store/socialStore'
 import { likePost, unlikePost } from '../services/socialService'
 import { useAuth } from '../contexts/AuthContext'
+import { toast } from '../store/toastStore'
 
 interface PostCardProps {
   post: SocialPost
@@ -17,6 +18,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, isNew = false, onComme
   const { toggleLikeOptimistic } = useSocialStore()
   const { user } = useAuth()
   const [likePending, setLikePending] = useState(false)
+  const [shared, setShared] = useState(false)
 
   const handleLike = async () => {
     if (likePending || !user) return
@@ -30,8 +32,30 @@ export const PostCard: React.FC<PostCardProps> = ({ post, isNew = false, onComme
       }
     } catch {
       toggleLikeOptimistic(post.id) // revert on error
+      toast.error('No se pudo procesar el like')
     } finally {
       setLikePending(false)
+    }
+  }
+
+  const handleShare = async () => {
+    const text = `@${post.username} en FORGE: "${post.content}"`
+    const url = window.location.href
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'FORGE', text, url })
+      } catch {
+        // user cancelled — no error needed
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(`${text}\n${url}`)
+        setShared(true)
+        toast.success('Copiado al portapapeles')
+        setTimeout(() => setShared(false), 2500)
+      } catch {
+        toast.error('No se pudo compartir')
+      }
     }
   }
 
@@ -152,9 +176,14 @@ export const PostCard: React.FC<PostCardProps> = ({ post, isNew = false, onComme
           <span className="font-mono tabular-nums">{post.comments}</span>
         </motion.button>
 
-        <button className="flex items-center gap-1.5 text-sm text-forge-white/40 hover:text-forge-white transition-colors ml-auto">
-          <Share2 size={18} />
-        </button>
+        <motion.button
+          whileTap={{ scale: 0.88 }}
+          onClick={handleShare}
+          className="flex items-center gap-1.5 text-sm transition-colors ml-auto"
+          style={{ color: shared ? '#4ADE80' : 'rgba(255,255,255,0.4)' }}
+        >
+          {shared ? <Check size={18} /> : <Share2 size={18} />}
+        </motion.button>
       </div>
     </motion.div>
   )

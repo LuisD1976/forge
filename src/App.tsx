@@ -8,6 +8,7 @@ import { BottomNav } from './components/BottomNav'
 import { Sidebar } from './components/Sidebar'
 import { InstallPrompt } from './components/InstallPrompt'
 import { AchievementModal } from './components/AchievementModal'
+import { Toaster } from './components/Toaster'
 import { AuthPage } from './pages/AuthPage'
 import { OnboardingPage } from './pages/OnboardingPage'
 import { HomePage } from './pages/HomePage'
@@ -354,6 +355,7 @@ function App() {
         <RightPanel />
         <InstallPrompt />
         <AchievementModal />
+        <Toaster />
       </div>
     )
   }
@@ -370,6 +372,7 @@ function App() {
       <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
       <InstallPrompt />
       <AchievementModal />
+      <Toaster />
     </div>
   )
 }

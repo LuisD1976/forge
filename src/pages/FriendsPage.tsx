@@ -13,6 +13,7 @@ import { NotificationsPanel } from '../components/NotificationsPanel'
 import { useSocialRealtime, useSocialPresence } from '../hooks/useSocialRealtime'
 import { useNotifications } from '../hooks/useNotifications'
 import { fetchFeedPosts, fetchLeaderboardFromDB, searchUsers, followUser, unfollowUser } from '../services/socialService'
+import type { LeaderboardEntry } from '../services/socialService'
 import type { RankTier } from '../types'
 
 type SocialTab = 'feed' | 'friends' | 'leaderboard'
@@ -118,19 +119,19 @@ export const FriendsPage: React.FC = () => {
 
   useEffect(() => {
     fetchLeaderboardFromDB()
-      .then((rows) =>
+      .then((rows: LeaderboardEntry[]) =>
         setLeaderboard(
           rows.map((p, i) => ({
             rank: i + 1,
             username: p.username ?? '',
             displayName: p.display_name ?? '',
             avatar: p.avatar_url ?? '',
-            weeklyVolume: 0,
+            weeklyVolume: p.weeklyVolume,
             tier: 'hierro' as RankTier,
           }))
         )
       )
-      .catch(() => { /* keep mock */ })
+      .catch(() => { /* keep empty leaderboard */ })
   }, [])
 
   const handleFlushPending = () => {

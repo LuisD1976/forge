@@ -12,6 +12,7 @@ import { useRanksStore } from '../store/ranksStore'
 import { usePRStore } from '../store/prStore'
 import { useAchievementsStore } from '../store/achievementsStore'
 import { EXERCISES } from '../data/exercises'
+import { ALL_STATIC_ROUTINES } from '../data/challenges'
 import { SetLogger } from '../components/SetLogger'
 import { WorkoutTimer } from '../components/WorkoutTimer'
 import { RankUpModal } from '../components/RankUpModal'
@@ -19,6 +20,7 @@ import { estimateOneRM, calculateXPForSet } from '../utils/rankCalculator'
 import { generateRoutineWithAI } from '../utils/claudeAPI'
 import { syncWorkoutSession, syncMuscleRanks, syncRoutine } from '../lib/sync'
 import { supabase } from '../lib/supabase'
+import { toast } from '../store/toastStore'
 import type { MuscleGroup, RankTier, PersonalRecord } from '../types'
 import { RANK_ORDER } from '../data/ranks'
 
@@ -54,10 +56,12 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
   const [pickerMode, setPickerMode] = useState<'add' | 'replace'>('add')
   const [replaceIdx, setReplaceIdx] = useState<number | null>(null)
 
-  // Auto-start if routineId provided
+  // Auto-start if routineId provided — also searches static challenge/warmup routines
   useEffect(() => {
     if (initialRoutineId && !activeWorkout) {
-      const routine = routines.find((r) => r.id === initialRoutineId)
+      const routine =
+        routines.find((r) => r.id === initialRoutineId) ??
+        ALL_STATIC_ROUTINES.find((r) => r.id === initialRoutineId)
       if (routine) {
         startWorkout(routine)
         setView('active')
@@ -140,7 +144,9 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
     // Sync to Supabase in background
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
-      syncWorkoutSession(session, user.id).catch(console.error)
+      syncWorkoutSession(session, user.id).catch(() => {
+        toast.warning('Entreno guardado localmente. Se sincronizará cuando haya conexión.')
+      })
       syncMuscleRanks(useRanksStore.getState().muscleRanks, user.id).catch(console.error)
     })
   }
@@ -172,9 +178,11 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
         if (user) syncRoutine(routine, user.id).catch(console.error)
       })
       setAiSuccessName(routine.name)
+      toast.success(`Rutina "${routine.name}" creada con IA`)
       setTimeout(() => { setView('routines'); setAiSuccessName(null) }, 2000)
     } else {
       setAiError(true)
+      toast.error('No se pudo generar la rutina con IA. Verifica tu conexión.')
     }
   }
 

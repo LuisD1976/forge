@@ -45,6 +45,12 @@ export const useWorkoutStore = create<WorkoutState>()(
         return { day: d.toLocaleDateString('es', { weekday: 'short' }), volume: 0 }
       }),
 
+      loadRoutines: (dbRoutines) => set(() => {
+        const defaultIds = new Set(DEFAULT_ROUTINES.map((r) => r.id))
+        const customRoutines = dbRoutines.filter((r) => !defaultIds.has(r.id))
+        return { routines: [...DEFAULT_ROUTINES, ...customRoutines] }
+      }),
+
       loadSessions: (sessions) => {
         const volume: Record<string, number> = {}
         const now = new Date()
@@ -61,8 +67,6 @@ export const useWorkoutStore = create<WorkoutState>()(
           weeklyVolume: state.weeklyVolume.map((d) => ({ ...d, volume: volume[d.day] ?? 0 })),
         }))
       },
-
-      loadRoutines: (routines) => set({ routines }),
 
       addRoutine: (routine) =>
         set((state) => ({ routines: [...state.routines, routine] })),

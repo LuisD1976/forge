@@ -16,7 +16,7 @@ import { WorkoutHeatmap } from '../components/WorkoutHeatmap'
 import { ExerciseProgressChart } from '../components/ExerciseProgressChart'
 import { ExerciseAnimation } from '../components/ExerciseAnimation'
 import {
-  generateSmartContent, getExerciseMeta,
+  generateSmartContent,
   type TrainingType, type TrainingGoal, type SmartWorkoutContent, type AIExerciseCard,
 } from '../services/grokWorkoutService'
 
@@ -101,14 +101,6 @@ const CHALLENGES = [
   },
 ]
 
-const MUSCLE_TABS = [
-  { id: 'pecho',  label: 'Pecho',    icon: '🫁', cats: ['push'],     keywords: ['bench','pec','chest','pecho','empuje'] },
-  { id: 'espalda',label: 'Espalda',  icon: '🦾', cats: ['pull'],     keywords: ['row','pull','lat','espalda','dorsal'] },
-  { id: 'piernas',label: 'Piernas',  icon: '🦵', cats: ['legs'],     keywords: ['squat','leg','pierna','quad','hamstring','sentadilla'] },
-  { id: 'brazos', label: 'Brazos',   icon: '💪', cats: ['push','pull'], keywords: ['curl','bicep','tricep','press','brazo'] },
-  { id: 'core',   label: 'Core',     icon: '⚡', cats: ['fullbody'], keywords: ['ab','core','plank','crunch','abdomen'] },
-  { id: 'full',   label: 'Full Body',icon: '🏋️', cats: ['fullbody','hiit'], keywords: ['full','body','hiit','cardio'] },
-]
 
 const QUICK_FILTERS = [
   { id: 'short',    label: '< 20 min',    icon: Timer },
@@ -400,47 +392,6 @@ function ChallengeCard({ c, delay, onOpen }: { c: typeof CHALLENGES[0]; delay: n
             <Play size={10} fill="white" />
             VER MÁS
           </motion.div>
-        </div>
-      </div>
-    </motion.div>
-  )
-}
-
-// Workout card for muscle tabs
-function WorkoutCard({ name, duration, sets, difficulty, color, imageUrl, onStart }: {
-  name: string; duration: number; sets: number; difficulty: number; color: string; imageUrl?: string; onStart: () => void
-}) {
-  return (
-    <motion.div
-      whileTap={{ scale: 0.96 }}
-      onClick={onStart}
-      className="flex-shrink-0 snap-start rounded-2xl overflow-hidden cursor-pointer"
-      style={{ width: 160, background: '#13131A', border: `1px solid ${color}20` }}
-    >
-      <div className="relative h-24 overflow-hidden">
-        {imageUrl ? (
-          <img src={imageUrl} alt={name} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${color}25, ${color}08)` }}>
-            <Dumbbell size={32} style={{ color: `${color}60` }} />
-          </div>
-        )}
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(0deg, rgba(19,19,26,0.9) 0%, transparent 60%)' }} />
-        <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[9px] font-bold" style={{ background: `${color}30`, color }}>
-          {['', 'Básico', 'Interm.', 'Avanzado', 'Elite', 'Máx.'][Math.min(difficulty, 5)]}
-        </div>
-      </div>
-      <div className="p-3">
-        <p className="font-bold text-forge-white text-xs leading-tight truncate mb-1.5">{name}</p>
-        <div className="flex items-center gap-2 text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
-          <span className="flex items-center gap-0.5"><Clock size={9} />{duration}min</span>
-          <span>·</span>
-          <span>{sets} series</span>
-        </div>
-        <div className="flex gap-0.5 mt-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-0.5 flex-1 rounded-full" style={{ background: i < difficulty ? color : 'rgba(255,255,255,0.08)' }} />
-          ))}
         </div>
       </div>
     </motion.div>

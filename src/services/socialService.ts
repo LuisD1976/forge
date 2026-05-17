@@ -189,13 +189,46 @@ export async function searchUsers(query: string, currentUserId: string): Promise
   }))
 }
 
-export async function fetchLeaderboardFromDB() {
-  const { data, error } = await supabase
+export interface LeaderboardEntry {
+  id: string
+  username: string | null
+  display_name: string | null
+  avatar_url: string | null
+  streak: number
+  weeklyVolume: number
+}
+
+export async function fetchLeaderboardFromDB(): Promise<LeaderboardEntry[]> {
+  // Get profiles
+  const { data: profiles, error } = await supabase
     .from('profiles')
     .select('id, username, display_name, avatar_url, streak')
     .order('streak', { ascending: false })
     .limit(20)
 
-  if (error || !data) throw new Error(error?.message ?? 'fetch failed')
-  return data
+  if (error || !profiles) throw new Error(error?.message ?? 'fetch failed')
+
+  if (profiles.length === 0) return []
+
+  // Get weekly volume for each profile
+  const startOfWeek = new Date()
+  startOfWeek.setDate(startOfWeek.getDate() - 7)
+  const startISO = startOfWeek.toISOString()
+
+  const { data: sessions } = await supabase
+    .from('workout_sessions')
+    .select('user_id, total_volume')
+    .in('user_id', profiles.map((p) => p.id))
+    .gte('date', startISO)
+
+  const volumeByUser: Record<string, number> = {}
+  if (sessions) {
+    for (const s of sessions as { user_id: string; total_volume: number }[]) {
+      volumeByUser[s.user_id] = (volumeByUser[s.user_id] ?? 0) + s.total_volume
+    }
+  }
+
+  return profiles
+    .map((p) => ({ ...p, weeklyVolume: volumeByUser[p.id] ?? 0 }))
+    .sort((a, b) => b.weeklyVolume - a.weeklyVolume || b.streak - a.streak)
 }

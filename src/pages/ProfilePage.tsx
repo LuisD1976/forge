@@ -33,6 +33,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onUpgrade, onAICoach, 
   const { signOut } = useAuth()
   const [showProModal, setShowProModal] = useState(false)
   const [period, setPeriod] = useState<Period>('7d')
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false)
 
   const overallTier = getOverallTier()
   const overallRank = RANK_DATA[overallTier]
@@ -41,13 +42,29 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onUpgrade, onAICoach, 
     ? Math.round(sessions.reduce((t, s) => t + s.duration, 0) / sessions.length)
     : 0
 
-  // Build chart data for different periods
+  // Build chart data for the selected period from real session data
   const chartData = (() => {
-    const days = period === '7d' ? 7 : period === '30d' ? 30 : 90
-    return Array.from({ length: Math.min(days, 7) }, (_, i) => {
+    if (period === '7d') {
+      return weeklyVolume
+    }
+    const days = period === '30d' ? 30 : 90
+    const buckets: Record<string, number> = {}
+    const now = new Date()
+    sessions.forEach((s) => {
+      const d = new Date(s.date)
+      const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000)
+      if (diffDays >= 0 && diffDays < days) {
+        const label = d.toLocaleDateString('es', { month: 'short', day: 'numeric' })
+        buckets[label] = (buckets[label] ?? 0) + s.totalVolume
+      }
+    })
+    // Build ordered array with all days in range (sample to max 12 for readability)
+    const step = Math.max(1, Math.floor(days / 12))
+    return Array.from({ length: Math.ceil(days / step) }, (_, i) => {
       const d = new Date()
-      d.setDate(d.getDate() - (6 - i))
-      return weeklyVolume[i] ?? { day: d.toLocaleDateString('es', { weekday: 'short' }), volume: 0 }
+      d.setDate(d.getDate() - (days - 1 - i * step))
+      const label = d.toLocaleDateString('es', { month: 'short', day: 'numeric' })
+      return { day: label, volume: buckets[label] ?? 0 }
     })
   })()
 
@@ -57,7 +74,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onUpgrade, onAICoach, 
 
   const handleInstall = async () => { await triggerPWAInstall() }
   const handleSignOut = async () => {
-    if (confirm('¿Cerrar sesión?')) { reset(); await signOut() }
+    if (!confirmingSignOut) {
+      setConfirmingSignOut(true)
+      return
+    }
+    reset()
+    await signOut()
   }
 
   if (!user) return null
@@ -180,7 +202,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onUpgrade, onAICoach, 
           {/* Escaneo corporal (PRO) */}
           <motion.button
             whileTap={{ scale: 0.97 }}
-            onClick={() => !user.isPro && onUpgrade?.()}
+            onClick={() => user.isPro ? onBodyStats?.() : onUpgrade?.()}
             className="card-metal p-4 flex flex-col gap-2 text-left relative overflow-hidden"
           >
             {!user.isPro && (
@@ -191,7 +213,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onUpgrade, onAICoach, 
             <Camera size={22} className="text-forge-orange" />
             <div>
               <div className="font-semibold text-forge-white text-sm">Escaneo</div>
-              <div className="text-xs text-forge-white/40">{user.isPro ? 'Analiza tu físico' : 'Solo PRO'}</div>
+              <div className="text-xs text-forge-white/40">{user.isPro ? 'Ver medidas corporales' : 'Solo PRO'}</div>
             </div>
           </motion.button>
 
@@ -315,13 +337,33 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onUpgrade, onAICoach, 
               <span className="text-sm font-mono font-bold text-forge-orange">{topPR.oneRM.toFixed(0)} kg</span>
             </div>
           )}
-          <button
-            onClick={handleSignOut}
-            className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-forge-border/30 transition-colors"
-          >
-            <LogOut size={18} className="text-forge-white/40" />
-            <span className="flex-1 text-sm text-forge-white">Cerrar sesión</span>
-          </button>
+          {confirmingSignOut ? (
+            <div className="flex items-center gap-2 px-4 py-3">
+              <span className="flex-1 text-sm text-forge-white/60">¿Seguro que quieres salir?</span>
+              <button
+                onClick={handleSignOut}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold text-white"
+                style={{ background: '#EF4444' }}
+              >
+                Salir
+              </button>
+              <button
+                onClick={() => setConfirmingSignOut(false)}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold"
+                style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.5)' }}
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleSignOut}
+              className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-forge-border/30 transition-colors"
+            >
+              <LogOut size={18} className="text-forge-white/40" />
+              <span className="flex-1 text-sm text-forge-white">Cerrar sesión</span>
+            </button>
+          )}
         </div>
       </div>
 

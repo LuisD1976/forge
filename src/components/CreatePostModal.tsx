@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useUserStore } from '../store/userStore'
 import { useSocialStore } from '../store/socialStore'
 import { createSocialPost, uploadPostImage } from '../services/socialService'
+import { toast } from '../store/toastStore'
 import type { SocialPost } from '../types'
 
 type UploadState = 'idle' | 'uploading' | 'done' | 'error'
@@ -90,8 +91,9 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({ onClose }) => 
         content: content.trim(),
         imageUrl: finalImageUrl,
       })
+      toast.success('Publicación enviada')
     } catch {
-      // optimistic — silent fail
+      toast.error('No se pudo publicar. Verifica tu conexión.')
     } finally {
       setPosting(false)
     }
