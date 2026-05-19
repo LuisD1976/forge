@@ -32,6 +32,7 @@ interface DBProfile {
 
 interface ProfileUpdates {
   display_name?: string
+  username?: string
   avatar_url?: string
   goal?: string
   experience?: string

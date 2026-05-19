@@ -1,6 +1,8 @@
 import { supabase } from '../lib/supabase'
 import type { SocialPost, Friend, RankTier } from '../types'
 
+const TIER_ORDER: RankTier[] = ['hierro', 'bronce', 'acero', 'cobre', 'plata', 'oro', 'titanio', 'platino', 'diamante', 'leyenda']
+
 export function timeAgoFromDate(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
   const mins = Math.floor(diff / 60000)
@@ -196,6 +198,7 @@ export interface LeaderboardEntry {
   avatar_url: string | null
   streak: number
   weeklyVolume: number
+  tier: RankTier
 }
 
 export async function fetchLeaderboardFromDB(): Promise<LeaderboardEntry[]> {
@@ -215,20 +218,38 @@ export async function fetchLeaderboardFromDB(): Promise<LeaderboardEntry[]> {
   startOfWeek.setDate(startOfWeek.getDate() - 7)
   const startISO = startOfWeek.toISOString()
 
-  const { data: sessions } = await supabase
-    .from('workout_sessions')
-    .select('user_id, total_volume')
-    .in('user_id', profiles.map((p) => p.id))
-    .gte('date', startISO)
+  const profileIds = profiles.map((p) => p.id)
+
+  const [sessionsRes, ranksRes] = await Promise.all([
+    supabase
+      .from('workout_sessions')
+      .select('user_id, total_volume')
+      .in('user_id', profileIds)
+      .gte('date', startISO),
+    supabase
+      .from('muscle_ranks')
+      .select('user_id, tier')
+      .in('user_id', profileIds),
+  ])
 
   const volumeByUser: Record<string, number> = {}
-  if (sessions) {
-    for (const s of sessions as { user_id: string; total_volume: number }[]) {
+  if (sessionsRes.data) {
+    for (const s of sessionsRes.data as { user_id: string; total_volume: number }[]) {
       volumeByUser[s.user_id] = (volumeByUser[s.user_id] ?? 0) + s.total_volume
     }
   }
 
+  const tierByUser: Record<string, RankTier> = {}
+  if (ranksRes.data) {
+    for (const r of ranksRes.data as { user_id: string; tier: RankTier }[]) {
+      const current = tierByUser[r.user_id]
+      if (!current || TIER_ORDER.indexOf(r.tier) > TIER_ORDER.indexOf(current)) {
+        tierByUser[r.user_id] = r.tier
+      }
+    }
+  }
+
   return profiles
-    .map((p) => ({ ...p, weeklyVolume: volumeByUser[p.id] ?? 0 }))
+    .map((p) => ({ ...p, weeklyVolume: volumeByUser[p.id] ?? 0, tier: tierByUser[p.id] ?? 'hierro' as RankTier }))
     .sort((a, b) => b.weeklyVolume - a.weeklyVolume || b.streak - a.streak)
 }

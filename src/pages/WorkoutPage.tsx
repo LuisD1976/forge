@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ChevronRight, X, Check, Clock,
-  ChevronLeft, Sparkles, Trophy, Share2,
+  ChevronLeft, Sparkles, Trophy, Share2, Link2, Unlink,
 } from 'lucide-react'
 import { SmartWorkoutHub } from '../components/SmartWorkoutHub'
 import { ExerciseAnimation } from '../components/ExerciseAnimation'
@@ -36,7 +36,7 @@ interface WorkoutPageProps {
 }
 
 export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onClose }) => {
-  const { routines, sessions, activeWorkout, startWorkout, addSet, updateSet, toggleSetComplete, finishWorkout, cancelWorkout, addRoutine, getStreak, addExerciseToWorkout, replaceExercise } = useWorkoutStore()
+  const { routines, sessions, activeWorkout, startWorkout, addSet, updateSet, toggleSetComplete, finishWorkout, cancelWorkout, addRoutine, getStreak, addExerciseToWorkout, replaceExercise, pairSuperset, unpairSuperset, updateSessionNotes } = useWorkoutStore()
   const { addXP, updateRank, muscleRanks } = useRanksStore()
   const { checkAndUpdatePR, records: prRecords } = usePRStore()
   const { unlock: unlockAchievements } = useAchievementsStore()
@@ -60,6 +60,8 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerMode, setPickerMode] = useState<'add' | 'replace'>('add')
   const [replaceIdx, setReplaceIdx] = useState<number | null>(null)
+  const [supersetPickerOpen, setSupersetPickerOpen] = useState(false)
+  const [sessionNotes, setSessionNotes] = useState('')
 
   // Auto-start if routineId provided — also searches static challenge/warmup routines
   useEffect(() => {
@@ -397,6 +399,23 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
           </motion.div>
         )}
 
+        {/* Notes textarea */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.42 }}
+          className="px-4 mb-2"
+        >
+          <textarea
+            value={sessionNotes}
+            onChange={(e) => setSessionNotes(e.target.value)}
+            placeholder="Notas del entreno (sensaciones, lesiones, PR intentados...)"
+            rows={2}
+            className="w-full rounded-2xl px-4 py-3 text-sm text-forge-white outline-none resize-none"
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', caretColor: '#FF6B1A' }}
+          />
+        </motion.div>
+
         {/* Share + CTA */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
@@ -452,9 +471,42 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
             {shared ? 'Publicado en el feed ✓' : 'Compartir entreno'}
           </motion.button>
 
+          {'share' in navigator && completedSession && (
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={async () => {
+                const text = `🔥 Acabo de completar "${completedSession.name}" en FORGE!\n⏱ ${completedSession.duration} min · 📊 ${(completedSession.totalVolume / 1000).toFixed(1)}t · ⚡ +${completedSession.xpGained} XP\n\n¡Descarga FORGE y supérame! 💪`
+                try {
+                  await navigator.share({ title: 'FORGE Workout', text })
+                } catch {
+                  // user cancelled or not supported
+                }
+              }}
+              className="w-full py-3 rounded-2xl flex items-center justify-center gap-2 font-semibold text-sm"
+              style={{ background: 'rgba(255,107,26,0.08)', border: '1.5px solid rgba(255,107,26,0.25)', color: '#FF6B1A' }}
+            >
+              <Share2 size={15} />
+              Compartir fuera de FORGE
+            </motion.button>
+          )}
+
           <motion.button
             whileTap={{ scale: 0.97 }}
-            onClick={() => { setView('routines'); onClose?.() }}
+            onClick={() => {
+              if (completedSession && sessionNotes.trim()) {
+                updateSessionNotes(completedSession.id, sessionNotes.trim())
+                supabase.auth.getUser().then(({ data: { user: u } }) => {
+                  if (u) {
+                    supabase.from('workout_sessions')
+                      .update({ notes: sessionNotes.trim() })
+                      .eq('id', completedSession.id)
+                      .then(null, console.error)
+                  }
+                })
+              }
+              setView('routines')
+              onClose?.()
+            }}
             className="w-full py-4 rounded-2xl font-bold text-white font-display text-xl"
             style={{ background: 'linear-gradient(135deg, #FF6B1A, #FFA052)', boxShadow: '0 6px 30px rgba(255,107,26,0.4)' }}
           >
@@ -528,30 +580,36 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
         </div>
 
         {/* Exercise tabs */}
-        <div className="flex gap-2 px-4 py-3 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+        <div className="flex gap-1 px-4 py-3 overflow-x-auto items-center" style={{ scrollbarWidth: 'none' }}>
           {activeWorkout.exercises.map((ex, i) => {
             const exData = EXERCISES.find((e) => e.id === ex.exerciseId)
             const done = ex.sets.filter((s) => s.completed).length
             const total = ex.sets.length
             const isActive = i === currentExerciseIdx
             const isDone = done === total && total > 0
+            const nextEx = activeWorkout.exercises[i + 1]
+            const isPairedWithNext = ex.supersetGroupId && nextEx?.supersetGroupId === ex.supersetGroupId
             return (
-              <motion.button
-                key={i}
-                whileTap={{ scale: 0.94 }}
-                onClick={() => setCurrentExerciseIdx(i)}
-                className="flex-shrink-0 px-3 py-1.5 rounded-2xl text-xs font-semibold transition-all flex items-center gap-1.5"
-                style={{
-                  background: isActive ? '#FF6B1A' : isDone ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.05)',
-                  color: isActive ? '#fff' : isDone ? '#4ADE80' : 'rgba(255,255,255,0.5)',
-                  border: isActive ? 'none' : isDone ? '1px solid rgba(74,222,128,0.35)' : '1px solid rgba(255,255,255,0.07)',
-                  boxShadow: isActive ? '0 2px 12px rgba(255,107,26,0.4)' : 'none',
-                }}
-              >
-                {isDone && <Check size={10} />}
-                {exData?.name.split(' ')[0] ?? ex.exerciseId}
-                <span className="font-mono text-[10px] opacity-70">{done}/{total}</span>
-              </motion.button>
+              <React.Fragment key={i}>
+                <motion.button
+                  whileTap={{ scale: 0.94 }}
+                  onClick={() => setCurrentExerciseIdx(i)}
+                  className="flex-shrink-0 px-3 py-1.5 rounded-2xl text-xs font-semibold transition-all flex items-center gap-1.5"
+                  style={{
+                    background: isActive ? '#FF6B1A' : isDone ? 'rgba(74,222,128,0.12)' : ex.supersetGroupId ? 'rgba(251,146,60,0.1)' : 'rgba(255,255,255,0.05)',
+                    color: isActive ? '#fff' : isDone ? '#4ADE80' : 'rgba(255,255,255,0.5)',
+                    border: isActive ? 'none' : isDone ? '1px solid rgba(74,222,128,0.35)' : ex.supersetGroupId ? '1px solid rgba(251,146,60,0.3)' : '1px solid rgba(255,255,255,0.07)',
+                    boxShadow: isActive ? '0 2px 12px rgba(255,107,26,0.4)' : 'none',
+                  }}
+                >
+                  {isDone && <Check size={10} />}
+                  {exData?.name.split(' ')[0] ?? ex.exerciseId}
+                  <span className="font-mono text-[10px] opacity-70">{done}/{total}</span>
+                </motion.button>
+                {isPairedWithNext && (
+                  <Link2 size={11} className="flex-shrink-0 text-orange-400/60" />
+                )}
+              </React.Fragment>
             )
           })}
         </div>
@@ -586,15 +644,77 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
                       </span>
                     ))}
                   </div>
-                  <button
-                    onClick={() => { setPickerMode('replace'); setReplaceIdx(currentExerciseIdx); setPickerOpen(true) }}
-                    className="text-xs mt-2 font-semibold"
-                    style={{ color: 'rgba(255,255,255,0.35)' }}
-                  >
-                    Cambiar →
-                  </button>
+                  <div className="flex items-center gap-3 mt-2">
+                    <button
+                      onClick={() => { setPickerMode('replace'); setReplaceIdx(currentExerciseIdx); setPickerOpen(true) }}
+                      className="text-xs font-semibold"
+                      style={{ color: 'rgba(255,255,255,0.35)' }}
+                    >
+                      Cambiar →
+                    </button>
+                    {currentEx.supersetGroupId ? (
+                      <button
+                        onClick={() => unpairSuperset(currentExerciseIdx)}
+                        className="flex items-center gap-1 text-xs font-semibold"
+                        style={{ color: '#FB923C' }}
+                      >
+                        <Unlink size={11} /> Quitar SS
+                      </button>
+                    ) : activeWorkout.exercises.length > 1 && (
+                      <button
+                        onClick={() => setSupersetPickerOpen(true)}
+                        className="flex items-center gap-1 text-xs font-semibold"
+                        style={{ color: 'rgba(255,255,255,0.35)' }}
+                      >
+                        <Link2 size={11} /> Superset
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
+
+              {/* Superset indicator */}
+              {currentEx.supersetGroupId && (() => {
+                const partner = activeWorkout.exercises.find(
+                  (ex, i) => i !== currentExerciseIdx && ex.supersetGroupId === currentEx.supersetGroupId
+                )
+                const partnerData = partner ? EXERCISES.find((e) => e.id === partner.exerciseId) : null
+                if (!partnerData) return null
+                return (
+                  <div className="flex items-center gap-2 px-2 mb-3 py-1.5 rounded-xl"
+                    style={{ background: 'rgba(251,146,60,0.08)', border: '1px solid rgba(251,146,60,0.25)' }}>
+                    <Link2 size={12} style={{ color: '#FB923C' }} />
+                    <span className="text-xs font-semibold" style={{ color: 'rgba(251,146,60,0.9)' }}>
+                      SS con: {partnerData.name}
+                    </span>
+                  </div>
+                )
+              })()}
+
+              {/* Superset partner picker mini-sheet */}
+              {supersetPickerOpen && (
+                <div className="mb-3 rounded-2xl overflow-hidden" style={{ background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
+                    <span className="text-xs font-bold text-white/70">Emparejar con...</span>
+                    <button onClick={() => setSupersetPickerOpen(false)} className="text-white/40"><X size={14} /></button>
+                  </div>
+                  <div className="flex flex-col divide-y divide-white/5">
+                    {activeWorkout.exercises.map((ex, i) => {
+                      if (i === currentExerciseIdx) return null
+                      const exInfo = EXERCISES.find((e) => e.id === ex.exerciseId)
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => { pairSuperset(currentExerciseIdx, i); setSupersetPickerOpen(false) }}
+                          className="px-3 py-2 text-left text-sm text-white/70 hover:bg-white/5 transition-colors"
+                        >
+                          {exInfo?.name ?? ex.exerciseId}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Progressive overload hint */}
               {(() => {

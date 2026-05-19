@@ -237,3 +237,76 @@ Formato exacto del array (sin markdown, sin texto extra):
     return buildFallbackPlan(q)
   }
 }
+
+// ─── Mesocycle Planner ────────────────────────────────────────────────────────
+
+export interface MesocycleWeek {
+  week: number
+  phase: string
+  focus: string
+  intensity: number
+  volume: string
+  mainLifts: string[]
+  notes: string
+}
+
+function buildFallbackMesocycle(goal: string, level: string): MesocycleWeek[] {
+  const isStrength = goal === 'fuerza' || goal === 'strength'
+  const isBeginner = level === 'beginner' || level === 'principiante'
+  return [
+    { week: 1, phase: 'Acumulación', focus: 'Aprendizaje técnico + volumen base', intensity: 65, volume: isBeginner ? '3×12' : '4×10', mainLifts: ['Sentadilla', 'Press banca', 'Peso muerto'], notes: 'Centra en técnica perfecta. Deja 2-3 reps en reserva.' },
+    { week: 2, phase: 'Acumulación', focus: 'Volumen progresivo', intensity: 68, volume: isBeginner ? '3×12' : '4×10', mainLifts: ['Sentadilla', 'Press banca', 'Dominadas'], notes: '+2.5kg en levantamientos principales respecto sem 1.' },
+    { week: 3, phase: 'Acumulación', focus: 'Pico de volumen', intensity: 72, volume: isBeginner ? '3×10' : '5×8', mainLifts: ['Peso muerto', 'Press militar', 'Remo barra'], notes: 'Semana más dura del bloque. Mantén técnica.' },
+    { week: 4, phase: 'Intensificación', focus: 'Reducir volumen, subir intensidad', intensity: 77, volume: isBeginner ? '3×8' : '4×6', mainLifts: ['Sentadilla fuerza', 'Press banca 4×6', 'Peso muerto 4×5'], notes: 'Descansa más entre series (2-3 min).' },
+    { week: 5, phase: 'Intensificación', focus: 'Fuerza máxima', intensity: 82, volume: isBeginner ? '3×6' : '4×5', mainLifts: ['Sentadilla pesada', 'Press banca pesado', 'Tirón pesado'], notes: `${isStrength ? 'Objetivo: 85% de tu 1RM' : 'Mantén control del peso'}` },
+    { week: 6, phase: isStrength ? 'Pico' : 'Hipertrofia avanzada', focus: isStrength ? 'Aproximación a máximos' : 'Densidad y congestión', intensity: isStrength ? 87 : 78, volume: isBeginner ? '3×5' : '3×4', mainLifts: ['Levantamientos principales'], notes: isStrength ? 'Testa tu fuerza máxima de forma segura.' : 'Series de alta densidad con poco descanso.' },
+    { week: 7, phase: 'Tapering', focus: 'Reducción de volumen', intensity: 80, volume: isBeginner ? '2×8' : '3×6', mainLifts: ['Todos los principales'], notes: 'Reduce series pero mantén intensidad. El cuerpo se recupera.' },
+    { week: 8, phase: 'Deload', focus: 'Recuperación activa', intensity: 60, volume: '2×10', mainLifts: ['Variantes ligeras'], notes: 'Descansa. Tu cuerpo crece durante el deload.' },
+  ]
+}
+
+export async function generateMesocycle(params: {
+  goal: string
+  level: string
+  weeks?: number
+}): Promise<MesocycleWeek[]> {
+  if (!GROQ_KEY) return buildFallbackMesocycle(params.goal, params.level)
+
+  const totalWeeks = params.weeks ?? 8
+  try {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 2048,
+        temperature: 0.4,
+        messages: [
+          { role: 'system', content: 'Eres el mejor periodizador de entrenamiento del mundo. Devuelves SOLO JSON válido sin markdown.' },
+          {
+            role: 'user',
+            content: `Crea un mesociclo de ${totalWeeks} semanas para:
+- Objetivo: ${params.goal}
+- Nivel: ${params.level}
+
+Devuelve un array JSON con exactamente ${totalWeeks} objetos con esta estructura:
+[{"week":1,"phase":"Acumulación","focus":"texto breve","intensity":70,"volume":"4×10","mainLifts":["ejercicio1","ejercicio2"],"notes":"consejo breve"}]
+
+Las fases deben seguir periodización: Acumulación → Intensificación → Pico → Deload
+La intensidad es % del 1RM (60-95). No uses markdown.`,
+          },
+        ],
+      }),
+    })
+    if (!res.ok) return buildFallbackMesocycle(params.goal, params.level)
+    const data = await res.json()
+    const text: string = data.choices?.[0]?.message?.content ?? ''
+    const match = text.match(/\[[\s\S]*\]/)
+    if (!match) return buildFallbackMesocycle(params.goal, params.level)
+    const weeks = JSON.parse(match[0]) as MesocycleWeek[]
+    if (!Array.isArray(weeks) || weeks.length === 0) return buildFallbackMesocycle(params.goal, params.level)
+    return weeks
+  } catch {
+    return buildFallbackMesocycle(params.goal, params.level)
+  }
+}

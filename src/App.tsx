@@ -23,6 +23,7 @@ import { HistoryPage } from './pages/HistoryPage'
 import type { NavTab } from './types'
 import { useRanksStore } from './store/ranksStore'
 import { RANK_DATA } from './data/ranks'
+import { useWorkoutRealtime } from './hooks/useWorkoutRealtime'
 
 function useIsDesktop() {
   const [is, setIs] = useState(window.innerWidth >= 1024)
@@ -213,6 +214,8 @@ function App() {
   const { user, isOnboardingComplete } = useUserStore()
   const { activeWorkout } = useWorkoutStore()
   const isDesktop = useIsDesktop()
+
+  useWorkoutRealtime(session?.user?.id)
 
   const [activeTab, setActiveTab] = useState<NavTab>('home')
   const [pendingRoutineId, setPendingRoutineId] = useState<string | null>(null)

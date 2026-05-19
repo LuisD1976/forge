@@ -41,6 +41,7 @@ export interface WorkoutExercise {
   exerciseId: string
   sets: SetEntry[]
   notes?: string
+  supersetGroupId?: string
 }
 
 export interface WorkoutSession {

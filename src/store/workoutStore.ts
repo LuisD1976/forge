@@ -31,6 +31,9 @@ interface WorkoutState {
   getStreak: () => number
   addExerciseToWorkout: (exerciseId: string, sets?: number) => void
   replaceExercise: (exerciseIndex: number, newExerciseId: string) => void
+  pairSuperset: (indexA: number, indexB: number) => void
+  unpairSuperset: (exerciseIndex: number) => void
+  updateSessionNotes: (sessionId: string, notes: string) => void
 }
 
 export const useWorkoutStore = create<WorkoutState>()(
@@ -141,6 +144,32 @@ export const useWorkoutStore = create<WorkoutState>()(
           exercises[exerciseIndex] = { ...exercises[exerciseIndex], exerciseId: newExerciseId }
           return { activeWorkout: { ...state.activeWorkout, exercises } }
         }),
+
+      pairSuperset: (indexA, indexB) =>
+        set((state) => {
+          if (!state.activeWorkout) return state
+          const groupId = crypto.randomUUID()
+          const exercises = state.activeWorkout.exercises.map((ex, i) =>
+            i === indexA || i === indexB ? { ...ex, supersetGroupId: groupId } : ex
+          )
+          return { activeWorkout: { ...state.activeWorkout, exercises } }
+        }),
+
+      unpairSuperset: (exerciseIndex) =>
+        set((state) => {
+          if (!state.activeWorkout) return state
+          const targetGroup = state.activeWorkout.exercises[exerciseIndex]?.supersetGroupId
+          if (!targetGroup) return state
+          const exercises = state.activeWorkout.exercises.map((ex) =>
+            ex.supersetGroupId === targetGroup ? { ...ex, supersetGroupId: undefined } : ex
+          )
+          return { activeWorkout: { ...state.activeWorkout, exercises } }
+        }),
+
+      updateSessionNotes: (sessionId, notes) =>
+        set((state) => ({
+          sessions: state.sessions.map((s) => s.id === sessionId ? { ...s, notes } : s),
+        })),
 
       finishWorkout: () => {
         const { activeWorkout, sessions } = get()

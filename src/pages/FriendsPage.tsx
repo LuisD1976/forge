@@ -127,7 +127,7 @@ export const FriendsPage: React.FC = () => {
             displayName: p.display_name ?? '',
             avatar: p.avatar_url ?? '',
             weeklyVolume: p.weeklyVolume,
-            tier: 'hierro' as RankTier,
+            tier: p.tier,
           }))
         )
       )

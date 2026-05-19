@@ -34,7 +34,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onUpgrade, onAICoach, 
   const { getLatest } = useBodyStore()
   const { records: prRecords } = usePRStore()
   const { unlockedIds } = useAchievementsStore()
-  const { signOut } = useAuth()
+  const { signOut, updateProfile } = useAuth()
   const [showProModal, setShowProModal] = useState(false)
   const [period, setPeriod] = useState<Period>('7d')
   const [confirmingSignOut, setConfirmingSignOut] = useState(false)
@@ -165,7 +165,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onUpgrade, onAICoach, 
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
-                      if (editName.trim()) updateUser({ displayName: editName.trim(), username: editUsername.trim() || user.username })
+                      if (editName.trim()) {
+                        const newUsername = editUsername.trim() || user.username
+                        updateUser({ displayName: editName.trim(), username: newUsername })
+                        updateProfile({ display_name: editName.trim(), username: newUsername }).catch(console.error)
+                      }
                       setEditingProfile(false)
                     }}
                     className="flex-1 py-1.5 rounded-xl text-xs font-bold text-white"

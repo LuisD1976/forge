@@ -13,6 +13,7 @@ import { RANK_DATA } from '../data/ranks'
 import { EXERCISES } from '../data/exercises'
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { WorkoutHeatmap } from '../components/WorkoutHeatmap'
+import { MuscleBalanceCard } from '../components/MuscleBalanceCard'
 import { ExerciseProgressChart } from '../components/ExerciseProgressChart'
 import { ExerciseAnimation } from '../components/ExerciseAnimation'
 import {
@@ -1564,7 +1565,12 @@ export const HomePage: React.FC<HomePageProps> = ({ onStartWorkout, onNavigate }
         </div>
       </motion.div>
 
-      {/* ── 12. HEATMAP ──────────────────────────────── */}
+      {/* ── 12. MUSCLE BALANCE ───────────────────────── */}
+      <motion.div variants={stagger.item} className="px-4">
+        <MuscleBalanceCard />
+      </motion.div>
+
+      {/* ── 13. HEATMAP ──────────────────────────────── */}
       <motion.div variants={stagger.item} className="px-4">
         <WorkoutHeatmap />
       </motion.div>
