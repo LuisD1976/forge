@@ -297,7 +297,7 @@ function App() {
   // ── Modales de página completa ──
   if (showPricing)   return <PricingPage onBack={() => setShowPricing(false)} />
   if (showBodyStats) return <BodyStatsPage onBack={() => setShowBodyStats(false)} />
-  if (showHistory)   return <HistoryPage onBack={() => setShowHistory(false)} />
+  if (showHistory)   return <HistoryPage onBack={() => setShowHistory(false)} onRepeat={(id) => { setShowHistory(false); setPendingRoutineId(id); setActiveTab('add') }} />
 
   const renderPage = () => {
     switch (activeTab) {

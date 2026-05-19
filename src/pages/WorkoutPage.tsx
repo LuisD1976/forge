@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ChevronRight, X, Check, Clock,
-  ChevronLeft, Sparkles, Trophy,
+  ChevronLeft, Sparkles, Trophy, Share2,
 } from 'lucide-react'
 import { SmartWorkoutHub } from '../components/SmartWorkoutHub'
 import { ExerciseAnimation } from '../components/ExerciseAnimation'
@@ -11,6 +11,8 @@ import { useWorkoutStore } from '../store/workoutStore'
 import { useRanksStore } from '../store/ranksStore'
 import { usePRStore } from '../store/prStore'
 import { useAchievementsStore } from '../store/achievementsStore'
+import { useSocialStore } from '../store/socialStore'
+import { useUserStore } from '../store/userStore'
 import { EXERCISES } from '../data/exercises'
 import { ALL_STATIC_ROUTINES } from '../data/challenges'
 import { SetLogger } from '../components/SetLogger'
@@ -38,6 +40,8 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
   const { addXP, updateRank, muscleRanks } = useRanksStore()
   const { checkAndUpdatePR, records: prRecords } = usePRStore()
   const { unlock: unlockAchievements } = useAchievementsStore()
+  const { addPost } = useSocialStore()
+  const { user } = useUserStore()
 
   const [view, setView] = useState<WorkoutView>(activeWorkout ? 'active' : 'routines')
   const [currentExerciseIdx, setCurrentExerciseIdx] = useState(0)
@@ -52,6 +56,7 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
   const [aiParams, setAiParams] = useState({ goal: 'ganar músculo', days: 3, equipment: 'gimnasio', level: 'intermedio' })
   const [rankUpQueue, setRankUpQueue] = useState<RankUpEvent[]>([])
   const [currentRankUp, setCurrentRankUp] = useState<RankUpEvent | null>(null)
+  const [shared, setShared] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerMode, setPickerMode] = useState<'add' | 'replace'>('add')
   const [replaceIdx, setReplaceIdx] = useState<number | null>(null)
@@ -392,13 +397,61 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
           </motion.div>
         )}
 
-        {/* CTA */}
+        {/* Share + CTA */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.45 }}
-          className="px-4 flex flex-col gap-2"
+          className="px-4 flex flex-col gap-3"
         >
+          {/* Share button */}
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => {
+              if (shared || !completedSession) return
+              const post = {
+                id: `post_${Date.now()}`,
+                userId: user?.id ?? 'local',
+                username: user?.username ?? 'forger',
+                avatar: user?.avatar ?? '',
+                content: `🔥 Acabo de completar "${completedSession.name}"!\n⏱ ${completedSession.duration} min · 📊 ${(completedSession.totalVolume / 1000).toFixed(1)}t · ⚡ +${completedSession.xpGained} XP\n#FORGE #FitnessMotivation`,
+                likes: 0,
+                comments: 0,
+                timeAgo: 'ahora mismo',
+                hasLiked: false,
+                workoutSummary: {
+                  name: completedSession.name,
+                  duration: completedSession.duration,
+                  exercises: completedSession.exercises.length,
+                  volume: completedSession.totalVolume,
+                  xp: completedSession.xpGained,
+                },
+              }
+              addPost(post)
+              supabase.auth.getUser().then(({ data: { user: u } }) => {
+                if (!u) return
+                supabase.from('posts').insert({
+                  id: post.id,
+                  user_id: u.id,
+                  content: post.content,
+                  workout_summary: post.workoutSummary,
+                } as never).then(null, console.error)
+              })
+              setShared(true)
+              toast.success('Entreno publicado en el feed 🎉')
+            }}
+            disabled={shared}
+            className="w-full py-3.5 rounded-2xl flex items-center justify-center gap-2 font-bold text-sm"
+            style={{
+              background: shared ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.07)',
+              border: shared ? '1.5px solid rgba(74,222,128,0.4)' : '1.5px solid rgba(255,255,255,0.12)',
+              color: shared ? '#4ADE80' : 'rgba(255,255,255,0.7)',
+            }}
+          >
+            <Share2 size={16} />
+            {shared ? 'Publicado en el feed ✓' : 'Compartir entreno'}
+          </motion.button>
+
           <motion.button
             whileTap={{ scale: 0.97 }}
             onClick={() => { setView('routines'); onClose?.() }}
@@ -542,6 +595,28 @@ export const WorkoutPage: React.FC<WorkoutPageProps> = ({ initialRoutineId, onCl
                   </button>
                 </div>
               </div>
+
+              {/* Progressive overload hint */}
+              {(() => {
+                const pr = prRecords.find(r => r.exerciseId === currentEx.exerciseId)
+                if (!pr) return null
+                const suggested = Math.ceil(pr.weight / 2.5) * 2.5 + 2.5
+                return (
+                  <div className="flex items-center justify-between px-2 mb-3 py-2 rounded-xl"
+                    style={{ background: 'rgba(255,215,0,0.06)', border: '1px solid rgba(255,215,0,0.2)' }}>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: 'rgba(255,215,0,0.6)' }}>Último PR</p>
+                      <p className="text-xs font-mono font-bold" style={{ color: '#FFD700' }}>
+                        {pr.weight}kg × {pr.reps} · 1RM {pr.oneRM.toFixed(0)}kg
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.35)' }}>Hoy intenta</p>
+                      <p className="text-sm font-bold font-mono" style={{ color: '#4ADE80' }}>{suggested}kg</p>
+                    </div>
+                  </div>
+                )
+              })()}
 
               <SetLogger
                 sets={currentEx.sets}

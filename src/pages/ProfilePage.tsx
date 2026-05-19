@@ -3,13 +3,16 @@ import { motion } from 'framer-motion'
 import {
   Crown, Flame, TrendingUp, Trophy, ChevronRight,
   LogOut, Star, Shield, Download, Sparkles,
-  Camera, Scale, Dumbbell, History, Target,
+  Camera, Scale, Dumbbell, History, Target, Bell, BellOff,
 } from 'lucide-react'
+import { requestNotificationPermission, notificationsSupported } from '../utils/notifications'
 import { useUserStore } from '../store/userStore'
 import { useWorkoutStore } from '../store/workoutStore'
 import { useRanksStore } from '../store/ranksStore'
 import { useBodyStore } from '../store/bodyStore'
 import { usePRStore } from '../store/prStore'
+import { useAchievementsStore } from '../store/achievementsStore'
+import { ACHIEVEMENTS, getRarityColor, getRarityLabel } from '../data/achievements'
 import { RANK_DATA } from '../data/ranks'
 import { triggerPWAInstall, isPWAInstallable, isPWAInstalled } from '../utils/pwaInstall'
 import { useAuth } from '../contexts/AuthContext'
@@ -25,15 +28,22 @@ interface ProfilePageProps {
 type Period = '7d' | '30d' | '90d'
 
 export const ProfilePage: React.FC<ProfilePageProps> = ({ onUpgrade, onAICoach, onBodyStats, onHistory }) => {
-  const { user, activatePro, reset } = useUserStore()
+  const { user, activatePro, reset, updateUser } = useUserStore()
   const { sessions, weeklyVolume } = useWorkoutStore()
   const { totalXP, getOverallTier, muscleRanks } = useRanksStore()
   const { getLatest } = useBodyStore()
   const { records: prRecords } = usePRStore()
+  const { unlockedIds } = useAchievementsStore()
   const { signOut } = useAuth()
   const [showProModal, setShowProModal] = useState(false)
   const [period, setPeriod] = useState<Period>('7d')
   const [confirmingSignOut, setConfirmingSignOut] = useState(false)
+  const [editingProfile, setEditingProfile] = useState(false)
+  const [editName, setEditName] = useState(user?.displayName ?? '')
+  const [editUsername, setEditUsername] = useState(user?.username ?? '')
+  const [remindersEnabled, setRemindersEnabled] = useState(() =>
+    localStorage.getItem('forge_reminders') === 'true'
+  )
 
   const overallTier = getOverallTier()
   const overallRank = RANK_DATA[overallTier]
@@ -73,6 +83,21 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onUpgrade, onAICoach, 
   const topPR = [...prRecords].sort((a, b) => b.oneRM - a.oneRM)[0]
 
   const handleInstall = async () => { await triggerPWAInstall() }
+
+  const handleToggleReminders = async () => {
+    if (!notificationsSupported()) return
+    if (remindersEnabled) {
+      localStorage.setItem('forge_reminders', 'false')
+      setRemindersEnabled(false)
+      return
+    }
+    const granted = await requestNotificationPermission()
+    if (granted) {
+      localStorage.setItem('forge_reminders', 'true')
+      setRemindersEnabled(true)
+    }
+  }
+
   const handleSignOut = async () => {
     if (!confirmingSignOut) {
       setConfirmingSignOut(true)
@@ -123,17 +148,58 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onUpgrade, onAICoach, 
             >
               {user.displayName?.[0]?.toUpperCase() ?? '?'}
             </div>
-            <div>
-              <h2 className="font-bold text-forge-white text-lg">{user.displayName}</h2>
-              <p className="text-forge-white/50 text-sm">@{user.username}</p>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs font-semibold" style={{ color: overallRank.color }}>
-                  {overallRank.icon} {overallRank.label}
-                </span>
-                <span className="text-forge-white/20">·</span>
-                <span className="text-xs text-forge-white/40">{totalXP.toLocaleString()} XP</span>
+            {editingProfile ? (
+              <div className="flex-1 flex flex-col gap-2">
+                <input
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  placeholder="Nombre"
+                  className="w-full bg-forge-black border border-forge-border rounded-xl px-3 py-2 text-forge-white text-sm outline-none focus:border-forge-orange"
+                />
+                <input
+                  value={editUsername}
+                  onChange={e => setEditUsername(e.target.value)}
+                  placeholder="@usuario"
+                  className="w-full bg-forge-black border border-forge-border rounded-xl px-3 py-2 text-forge-white text-sm outline-none focus:border-forge-orange"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      if (editName.trim()) updateUser({ displayName: editName.trim(), username: editUsername.trim() || user.username })
+                      setEditingProfile(false)
+                    }}
+                    className="flex-1 py-1.5 rounded-xl text-xs font-bold text-white"
+                    style={{ background: '#FF6B1A' }}
+                  >
+                    Guardar
+                  </button>
+                  <button
+                    onClick={() => { setEditName(user.displayName ?? ''); setEditUsername(user.username ?? ''); setEditingProfile(false) }}
+                    className="flex-1 py-1.5 rounded-xl text-xs font-semibold"
+                    style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.5)' }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-bold text-forge-white text-lg">{user.displayName}</h2>
+                  <button onClick={() => setEditingProfile(true)} className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.4)' }}>
+                    Editar
+                  </button>
+                </div>
+                <p className="text-forge-white/50 text-sm">@{user.username}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs font-semibold" style={{ color: overallRank.color }}>
+                    {overallRank.icon} {overallRank.label}
+                  </span>
+                  <span className="text-forge-white/20">·</span>
+                  <span className="text-xs text-forge-white/40">{totalXP.toLocaleString()} XP</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Stats */}
@@ -283,6 +349,39 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onUpgrade, onAICoach, 
         </motion.button>
       </div>
 
+      {/* Achievements gallery */}
+      <div className="mx-4 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold text-forge-white text-sm">Logros</h3>
+          <span className="text-xs text-forge-white/40">{unlockedIds.length} / {ACHIEVEMENTS.length} desbloqueados</span>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {ACHIEVEMENTS.map((a) => {
+            const unlocked = unlockedIds.includes(a.id)
+            const color = getRarityColor(a.rarity)
+            return (
+              <motion.div
+                key={a.id}
+                whileTap={{ scale: 0.95 }}
+                className="rounded-2xl p-3 flex flex-col items-center gap-1.5 text-center"
+                style={{
+                  background: unlocked ? `${color}10` : 'rgba(255,255,255,0.03)',
+                  border: unlocked ? `1px solid ${color}30` : '1px solid rgba(255,255,255,0.06)',
+                  opacity: unlocked ? 1 : 0.4,
+                }}
+              >
+                <span className="text-2xl" style={{ filter: unlocked ? 'none' : 'grayscale(1)' }}>{a.icon}</span>
+                <p className="text-[10px] font-bold text-white leading-tight">{a.name}</p>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                  style={{ background: `${color}20`, color: unlocked ? color : 'rgba(255,255,255,0.3)' }}>
+                  {getRarityLabel(a.rarity)}
+                </span>
+              </motion.div>
+            )
+          })}
+        </div>
+      </div>
+
       {/* Settings list */}
       <div className="mx-4">
         <div className="card-metal divide-y divide-forge-border">
@@ -337,6 +436,30 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onUpgrade, onAICoach, 
               <span className="text-sm font-mono font-bold text-forge-orange">{topPR.oneRM.toFixed(0)} kg</span>
             </div>
           )}
+          {notificationsSupported() && (
+            <button
+              onClick={handleToggleReminders}
+              className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-forge-border/30 transition-colors"
+            >
+              {remindersEnabled
+                ? <Bell size={18} className="text-forge-orange" />
+                : <BellOff size={18} className="text-forge-white/40" />}
+              <div className="flex-1">
+                <span className="text-sm text-forge-white">Recordatorios de entreno</span>
+                <div className="text-xs text-forge-white/30">{remindersEnabled ? 'Activos · aviso diario a las 5pm' : 'Desactivados'}</div>
+              </div>
+              <div
+                className="w-11 h-6 rounded-full relative transition-colors"
+                style={{ background: remindersEnabled ? '#FF6B1A' : 'rgba(255,255,255,0.1)' }}
+              >
+                <div
+                  className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all"
+                  style={{ left: remindersEnabled ? '22px' : '2px' }}
+                />
+              </div>
+            </button>
+          )}
+
           {confirmingSignOut ? (
             <div className="flex items-center gap-2 px-4 py-3">
               <span className="flex-1 text-sm text-forge-white/60">¿Seguro que quieres salir?</span>

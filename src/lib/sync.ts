@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import type { WorkoutSession, MuscleRank, Routine } from '../types'
+import type { WeeklyPlan } from '../store/weeklyPlanStore'
 
 export async function syncWorkoutSession(session: WorkoutSession, userId: string) {
   await supabase.from('workout_sessions').upsert({
@@ -80,6 +81,39 @@ export async function syncRoutine(routine: Routine, userId: string) {
 
 export async function deleteRoutine(routineId: string) {
   await supabase.from('routines').delete().eq('id', routineId)
+}
+
+export async function syncWeeklyPlan(plan: WeeklyPlan, userId: string) {
+  await supabase.from('weekly_plans').upsert({
+    id: plan.id,
+    user_id: userId,
+    name: plan.name,
+    equipment: plan.equipment,
+    assignments: plan.assignments as never,
+    is_active: plan.isActive,
+    created_at: plan.createdAt,
+  } as never, { onConflict: 'id' })
+}
+
+export async function deleteWeeklyPlan(planId: string) {
+  await supabase.from('weekly_plans').delete().eq('id', planId)
+}
+
+export async function loadUserWeeklyPlans(userId: string): Promise<WeeklyPlan[]> {
+  const { data } = await supabase
+    .from('weekly_plans')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true })
+  if (!data) return []
+  return (data as any[]).map((r) => ({
+    id: r.id,
+    name: r.name,
+    equipment: r.equipment ?? 'gym',
+    assignments: r.assignments ?? {},
+    isActive: r.is_active ?? false,
+    createdAt: r.created_at,
+  }))
 }
 
 export async function loadUserRoutines(userId: string): Promise<Routine[]> {

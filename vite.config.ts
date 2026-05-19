@@ -22,6 +22,29 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         categories: ['fitness', 'health', 'lifestyle'],
+        shortcuts: [
+          {
+            name: 'Empezar entreno',
+            short_name: 'Entreno',
+            description: 'Ir directo a entrenar',
+            url: '/?tab=add',
+            icons: [{ src: '/icons/icon-96.png', sizes: '96x96' }],
+          },
+          {
+            name: 'Ver historial',
+            short_name: 'Historial',
+            description: 'Ver entrenamientos pasados',
+            url: '/?tab=history',
+            icons: [{ src: '/icons/icon-96.png', sizes: '96x96' }],
+          },
+          {
+            name: 'Mi perfil',
+            short_name: 'Perfil',
+            description: 'Ver estadísticas y progreso',
+            url: '/?tab=profile',
+            icons: [{ src: '/icons/icon-96.png', sizes: '96x96' }],
+          },
+        ],
         icons: [
           { src: '/icons/icon-72.png', sizes: '72x72', type: 'image/png' },
           { src: '/icons/icon-96.png', sizes: '96x96', type: 'image/png' },

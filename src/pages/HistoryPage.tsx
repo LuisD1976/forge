@@ -1,22 +1,25 @@
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronLeft, ChevronDown, Dumbbell, Clock, TrendingUp, Trophy, Flame } from 'lucide-react'
+import { ChevronLeft, ChevronDown, Dumbbell, Clock, TrendingUp, Trophy, Flame, RotateCcw } from 'lucide-react'
 import { useWorkoutStore } from '../store/workoutStore'
 import { EXERCISES } from '../data/exercises'
 import type { WorkoutSession } from '../types'
 
 interface HistoryPageProps {
   onBack: () => void
+  onRepeat?: (routineId: string) => void
 }
 
-type Filter = 'all' | 'push' | 'pull' | 'legs' | 'fullbody'
+type Filter = 'all' | 'push' | 'pull' | 'legs' | 'fullbody' | '7d' | '30d'
 
 const FILTERS: { id: Filter; label: string }[] = [
-  { id: 'all', label: 'Todos' },
-  { id: 'push', label: 'Push' },
-  { id: 'pull', label: 'Pull' },
-  { id: 'legs', label: 'Pierna' },
-  { id: 'fullbody', label: 'Full' },
+  { id: 'all',     label: 'Todos' },
+  { id: '7d',      label: '7 días' },
+  { id: '30d',     label: '30 días' },
+  { id: 'push',    label: 'Push' },
+  { id: 'pull',    label: 'Pull' },
+  { id: 'legs',    label: 'Pierna' },
+  { id: 'fullbody',label: 'Full' },
 ]
 
 function formatDate(iso: string) {
@@ -29,7 +32,7 @@ function formatDate(iso: string) {
   return d.toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
-function SessionCard({ session }: { session: WorkoutSession }) {
+function SessionCard({ session, onRepeat }: { session: WorkoutSession; onRepeat?: () => void }) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -94,7 +97,7 @@ function SessionCard({ session }: { session: WorkoutSession }) {
               </div>
 
               {/* Exercises */}
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1.5 mb-4">
                 {session.exercises.map((ex, i) => {
                   const exercise = EXERCISES.find((e) => e.id === ex.exerciseId)
                   const completed = ex.sets.filter((s) => s.completed)
@@ -110,6 +113,19 @@ function SessionCard({ session }: { session: WorkoutSession }) {
                   )
                 })}
               </div>
+
+              {/* Repeat button */}
+              {onRepeat && (
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={(e) => { e.stopPropagation(); onRepeat() }}
+                  className="w-full py-2.5 rounded-xl flex items-center justify-center gap-2 text-xs font-bold"
+                  style={{ background: 'rgba(255,107,26,0.1)', border: '1px solid rgba(255,107,26,0.3)', color: '#FF6B1A' }}
+                >
+                  <RotateCcw size={13} />
+                  Repetir este entreno
+                </motion.button>
+              )}
             </div>
           </motion.div>
         )}
@@ -118,14 +134,16 @@ function SessionCard({ session }: { session: WorkoutSession }) {
   )
 }
 
-export function HistoryPage({ onBack }: HistoryPageProps) {
-  const { sessions } = useWorkoutStore()
+export function HistoryPage({ onBack, onRepeat }: HistoryPageProps) {
+  const { sessions, routines, addRoutine } = useWorkoutStore()
   const [filter, setFilter] = useState<Filter>('all')
 
   const filtered = useMemo(() => {
-    if (filter === 'all') return sessions
+    const now = Date.now()
     return sessions.filter((s) => {
       const name = s.name.toLowerCase()
+      if (filter === '7d')  return now - new Date(s.date).getTime() <= 7  * 86400000
+      if (filter === '30d') return now - new Date(s.date).getTime() <= 30 * 86400000
       if (filter === 'push') return name.includes('push') || name.includes('pecho') || name.includes('empuje')
       if (filter === 'pull') return name.includes('pull') || name.includes('espalda') || name.includes('tirón')
       if (filter === 'legs') return name.includes('leg') || name.includes('pierna') || name.includes('cuadric') || name.includes('glút')
@@ -199,7 +217,32 @@ export function HistoryPage({ onBack }: HistoryPageProps) {
           </div>
         ) : (
           filtered.map((session) => (
-            <SessionCard key={session.id} session={session} />
+            <SessionCard
+              key={session.id}
+              session={session}
+              onRepeat={onRepeat ? () => {
+                const repeatId = `repeat_${session.id}`
+                const existing = routines.find(r => r.id === repeatId)
+                if (!existing) {
+                  addRoutine({
+                    id: repeatId,
+                    name: session.name,
+                    description: 'Repetición de entreno anterior',
+                    exercises: session.exercises.map(ex => ({
+                      exerciseId: ex.exerciseId,
+                      sets: ex.sets.filter(s => s.completed).length || 3,
+                      reps: ex.sets[0]?.reps?.toString() ?? '10',
+                      rest: 60,
+                    })),
+                    frequency: 'libre',
+                    category: 'custom',
+                    difficulty: 3,
+                    isAIGenerated: false,
+                  })
+                }
+                onRepeat(repeatId)
+              } : undefined}
+            />
           ))
         )}
       </div>

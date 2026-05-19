@@ -5,6 +5,9 @@ import { useUserStore } from '../store/userStore'
 import { useWorkoutStore } from '../store/workoutStore'
 import { useRanksStore } from '../store/ranksStore'
 import { loadUserWorkouts, loadMuscleRanks, loadUserRoutines } from '../lib/sync'
+import { useWeeklyPlanStore } from '../store/weeklyPlanStore'
+import { useBodyStore } from '../store/bodyStore'
+import { usePRStore } from '../store/prStore'
 import type { UserProfile, QuestionnaireAnswers } from '../types'
 
 interface DBProfile {
@@ -82,6 +85,13 @@ async function loadUserDataIntoStores(userId: string) {
   if (workouts.length > 0) useWorkoutStore.getState().loadSessions(workouts)
   if (ranks.length > 0) useRanksStore.getState().loadRanks(ranks)
   if (routines.length > 0) useWorkoutStore.getState().loadRoutines(routines)
+
+  // Load additional stores in parallel (silent fail — tables may not exist yet)
+  await Promise.allSettled([
+    useWeeklyPlanStore.getState().loadFromSupabase(userId),
+    useBodyStore.getState().loadFromSupabase(userId),
+    usePRStore.getState().loadFromSupabase(userId),
+  ])
 }
 
 async function loadProfileIntoStore(

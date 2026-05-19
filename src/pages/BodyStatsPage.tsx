@@ -4,7 +4,7 @@ import {
   ChevronLeft, Scale, Ruler, TrendingUp, Zap,
   Plus, CheckCircle, Activity,
 } from 'lucide-react'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, LineChart, Line } from 'recharts'
 import { useBodyStore } from '../store/bodyStore'
 import { useUserStore } from '../store/userStore'
 
@@ -53,11 +53,18 @@ export function BodyStatsPage({ onBack }: BodyStatsPageProps) {
   const [arms, setArms]       = useState(latest?.arms?.toString()     ?? '')
   const [hips, setHips]        = useState(latest?.hips?.toString()    ?? '')
 
-  // TDEE form
-  const [tdeeAge,      setTdeeAge]      = useState('30')
-  const [tdeeGender,   setTdeeGender]   = useState<'male' | 'female'>('male')
+  // TDEE form — pre-fill from onboarding questionnaire when available
+  const [tdeeAge,      setTdeeAge]      = useState(() => user?.questionnaire?.age?.toString() ?? '30')
+  const [tdeeGender,   setTdeeGender]   = useState<'male' | 'female'>(() =>
+    user?.questionnaire?.sex === 'female' ? 'female' : 'male'
+  )
   const [tdeeActivity, setTdeeActivity] = useState('moderate')
-  const [tdeeGoal,     setTdeeGoal]     = useState<'cut' | 'maintain' | 'bulk'>('maintain')
+  const [tdeeGoal,     setTdeeGoal]     = useState<'cut' | 'maintain' | 'bulk'>(() => {
+    const g = user?.goal
+    if (g === 'fat_loss') return 'cut'
+    if (g === 'strength' || g === 'muscle') return 'bulk'
+    return 'maintain'
+  })
 
   const handleSave = async () => {
     if (!weight && !height) return
@@ -78,6 +85,27 @@ export function BodyStatsPage({ onBack }: BodyStatsPageProps) {
   }
 
   const weightHistory = getWeightHistory(60)
+
+  const bodyFatHistory = measurements
+    .filter((m) => m.bodyFat)
+    .slice(0, 30)
+    .reverse()
+    .map((m) => ({
+      date: new Date(m.date).toLocaleDateString('es', { day: 'numeric', month: 'short' }),
+      bodyFat: m.bodyFat!,
+    }))
+
+  const circumHistory = measurements
+    .filter((m) => m.waist || m.chest || m.arms)
+    .slice(0, 30)
+    .reverse()
+    .map((m) => ({
+      date: new Date(m.date).toLocaleDateString('es', { day: 'numeric', month: 'short' }),
+      waist: m.waist,
+      chest: m.chest,
+      arms: m.arms,
+    }))
+
   const bmi = latest?.weight && latest?.height
     ? latest.weight / Math.pow(latest.height / 100, 2)
     : null
@@ -290,6 +318,66 @@ export function BodyStatsPage({ onBack }: BodyStatsPageProps) {
                       <ReferenceLine y={weightHistory[0].weight} stroke="rgba(255,107,26,0.2)" strokeDasharray="4 4" />
                       <Area type="monotone" dataKey="weight" stroke="#FF6B1A" strokeWidth={2} fill="url(#weightGrad)" dot={{ fill: '#FF6B1A', r: 3 }} />
                     </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
+            {/* Body fat chart */}
+            {bodyFatHistory.length >= 2 && (
+              <div className="card-metal p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-forge-white text-sm">Grasa corporal</h3>
+                  <span className="text-xs font-mono font-bold" style={{ color: '#60A5FA' }}>
+                    {bodyFatHistory[bodyFatHistory.length - 1].bodyFat}%
+                  </span>
+                </div>
+                <div className="h-32">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={bodyFatHistory} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="bfGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#60A5FA" stopOpacity={0.4} />
+                          <stop offset="95%" stopColor="#60A5FA" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="date" tick={{ fill: 'rgba(245,245,240,0.25)', fontSize: 9 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                      <YAxis domain={['auto', 'auto']} tick={{ fill: 'rgba(245,245,240,0.25)', fontSize: 9 }} axisLine={false} tickLine={false} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#13131A', border: '1px solid #252530', borderRadius: '10px', fontSize: 12, color: '#F0F0EC' }}
+                        formatter={(v) => [`${v}%`, 'Grasa corporal']}
+                      />
+                      <Area type="monotone" dataKey="bodyFat" stroke="#60A5FA" strokeWidth={2} fill="url(#bfGrad)" dot={{ fill: '#60A5FA', r: 3 }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
+            {/* Circumferences chart */}
+            {circumHistory.length >= 2 && (
+              <div className="card-metal p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-forge-white text-sm">Circunferencias</h3>
+                  <div className="flex gap-3 text-[10px]">
+                    <span style={{ color: '#FB923C' }}>— Cintura</span>
+                    <span style={{ color: '#4ADE80' }}>— Pecho</span>
+                    <span style={{ color: '#C084FC' }}>— Brazo</span>
+                  </div>
+                </div>
+                <div className="h-36">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={circumHistory} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
+                      <XAxis dataKey="date" tick={{ fill: 'rgba(245,245,240,0.25)', fontSize: 9 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+                      <YAxis domain={['auto', 'auto']} tick={{ fill: 'rgba(245,245,240,0.25)', fontSize: 9 }} axisLine={false} tickLine={false} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#13131A', border: '1px solid #252530', borderRadius: '10px', fontSize: 12, color: '#F0F0EC' }}
+                        formatter={(v, name) => [`${v} cm`, name === 'waist' ? 'Cintura' : name === 'chest' ? 'Pecho' : 'Brazo']}
+                      />
+                      <Line type="monotone" dataKey="waist" stroke="#FB923C" strokeWidth={2} dot={false} connectNulls />
+                      <Line type="monotone" dataKey="chest" stroke="#4ADE80" strokeWidth={2} dot={false} connectNulls />
+                      <Line type="monotone" dataKey="arms"  stroke="#C084FC" strokeWidth={2} dot={false} connectNulls />
+                    </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>
